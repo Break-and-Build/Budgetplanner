@@ -3,12 +3,7 @@ import { Heart, Sparkles } from "lucide-react";
 import { Button } from "./ui/button";
 import { Textarea } from "./ui/textarea";
 import { Label } from "./ui/label";
-
-export interface ReflectionData {
-  tight: string;
-  flexible: string;
-  intentional: string;
-}
+import type { ReflectionData } from "@budgetplanner/core";
 
 interface MonthlyReflectionProps {
   reflection: ReflectionData;
