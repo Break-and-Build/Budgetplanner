@@ -5,6 +5,7 @@ import { CurrencyInput } from "./CurrencyInput";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { Switch } from "./ui/switch";
+import { formatCurrency } from "@/app/utils/formatCurrency";
 
 export interface PriorityExpense {
   id: string;
@@ -133,12 +134,12 @@ export function PriorityExpenses({
         <div className="mt-6 bg-slate-50 rounded-xl p-4 border border-slate-200">
           <div className="flex justify-between text-sm mb-1">
             <span className="text-slate-600">Total priority expenses</span>
-            <span className="text-slate-800">{currency}{totalExpenses.toLocaleString()}</span>
+            <span className="text-slate-800">{currency}{formatCurrency(totalExpenses)}</span>
           </div>
           <div className="flex justify-between">
             <span className="text-slate-600">Remaining</span>
             <span className={remaining >= 0 ? "text-slate-800" : "text-red-600"}>
-              {currency}{remaining.toLocaleString()}
+              {currency}{formatCurrency(remaining)}
             </span>
           </div>
         </div>

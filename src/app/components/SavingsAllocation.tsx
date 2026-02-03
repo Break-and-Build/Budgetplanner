@@ -1,15 +1,22 @@
 import { useState } from "react";
-import { PiggyBank } from "lucide-react";
+import { PiggyBank, Plus, Trash } from "lucide-react";
 import { Button } from "./ui/button";
 import { CurrencyInput } from "./CurrencyInput";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { Switch } from "./ui/switch";
+import { formatCurrency } from "@/app/utils/formatCurrency";
+
+export interface SavingsEntry {
+  id: string;
+  name: string;
+  type: "amount" | "percentage";
+  value: number;
+}
 
 export interface SavingsData {
   enabled: boolean;
-  type: "amount" | "percentage";
-  value: number;
+  entries: SavingsEntry[];
 }
 
 interface SavingsAllocationProps {
@@ -30,26 +37,58 @@ export function SavingsAllocation({
   currency,
 }: SavingsAllocationProps) {
   const [savingsEnabled, setSavingsEnabled] = useState(savings.enabled);
-  const [savingsType, setSavingsType] = useState<"amount" | "percentage">(
-    savings.type
+  const [entries, setEntries] = useState<SavingsEntry[]>(
+    savings.entries.length > 0 ? savings.entries : []
   );
-  const [savingsValue, setSavingsValue] = useState(savings.value);
+
+  const addEntry = () => {
+    const newEntry: SavingsEntry = {
+      id: Date.now().toString(),
+      name: "",
+      type: "amount",
+      value: 0,
+    };
+    setEntries([...entries, newEntry]);
+  };
+
+  const removeEntry = (id: string) => {
+    setEntries(entries.filter((e) => e.id !== id));
+  };
+
+  const updateEntry = (
+    id: string,
+    field: keyof SavingsEntry,
+    value: string | number
+  ) => {
+    setEntries(entries.map((e) => (e.id === id ? { ...e, [field]: value } : e)));
+  };
 
   const handleNext = () => {
     onUpdateSavings({
       enabled: savingsEnabled,
-      type: savingsType,
-      value: savingsValue,
+      entries: entries,
     });
     onNext();
   };
 
-  const savingsAmount =
-    savingsType === "percentage"
-      ? (remainingAfterPriorities * savingsValue) / 100
-      : savingsValue;
+  const calculateSavingsAmount = (entry: SavingsEntry): number => {
+    return entry.type === "percentage"
+      ? (remainingAfterPriorities * entry.value) / 100
+      : entry.value;
+  };
 
-  const afterSavings = remainingAfterPriorities - savingsAmount;
+  const totalSavings = entries.reduce(
+    (sum, entry) => sum + calculateSavingsAmount(entry),
+    0
+  );
+  const afterSavings = remainingAfterPriorities - totalSavings;
+
+  const handleToggle = (checked: boolean) => {
+    setSavingsEnabled(checked);
+    if (checked && entries.length === 0) {
+      addEntry();
+    }
+  };
 
   return (
     <div className="max-w-2xl mx-auto">
@@ -67,7 +106,7 @@ export function SavingsAllocation({
               <PiggyBank className="w-5 h-5 text-emerald-600" />
             </div>
             <div>
-              <Label htmlFor="savings-toggle" className="cursor-pointer">
+              <Label htmlFor="savings-toggle" className="cursor-pointer text-lg">
                 Enable monthly savings
               </Label>
               <p className="text-xs text-slate-500">
@@ -78,81 +117,124 @@ export function SavingsAllocation({
           <Switch
             id="savings-toggle"
             checked={savingsEnabled}
-            onCheckedChange={setSavingsEnabled}
+            onCheckedChange={handleToggle}
           />
         </div>
 
         {savingsEnabled && (
           <div className="space-y-4 pt-4 border-t border-slate-200">
-            <div className="flex gap-2">
-              <Button
-                variant={savingsType === "amount" ? "default" : "outline"}
-                onClick={() => setSavingsType("amount")}
-                className={
-                  savingsType === "amount"
-                    ? "flex-1 bg-indigo-600 hover:bg-indigo-700"
-                    : "flex-1"
-                }
+            {entries.map((entry) => (
+              <div
+                key={entry.id}
+                className="border border-slate-200 rounded-xl p-4 space-y-3"
               >
-                Fixed Amount
-              </Button>
-              <Button
-                variant={savingsType === "percentage" ? "default" : "outline"}
-                onClick={() => setSavingsType("percentage")}
-                className={
-                  savingsType === "percentage"
-                    ? "flex-1 bg-indigo-600 hover:bg-indigo-700"
-                    : "flex-1"
-                }
-              >
-                Percentage
-              </Button>
-            </div>
+                <div className="flex gap-3 items-start">
+                  <div className="flex-1">
+                    <Label className="text-sm text-slate-600">Savings goal name</Label>
+                    <Input
+                      placeholder="e.g., Emergency fund, Vacation"
+                      value={entry.name}
+                      onChange={(e) => updateEntry(entry.id, "name", e.target.value)}
+                      className="mt-1"
+                    />
+                  </div>
+                  {entries.length > 1 && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => removeEntry(entry.id)}
+                      className="text-slate-400 hover:text-red-500 mt-6"
+                    >
+                      <Trash className="w-4 h-4" />
+                    </Button>
+                  )}
+                </div>
 
-            <div>
-              <Label htmlFor="savings-value">
-                {savingsType === "amount"
-                  ? `Amount (${currency})`
-                  : "Percentage (%)"}
-              </Label>
-              {savingsType === "amount" ? (
-                <CurrencyInput
-                  id="savings-value"
-                  value={savingsValue}
-                  onChange={setSavingsValue}
-                  placeholder="0"
-                  className="text-lg"
-                />
-              ) : (
-                <Input
-                  id="savings-value"
-                  type="number"
-                  placeholder="10"
-                  value={savingsValue || ""}
-                  onChange={(e) =>
-                    setSavingsValue(parseFloat(e.target.value) || 0)
-                  }
-                  className="text-lg"
-                />
-              )}
-            </div>
+                <div className="flex gap-2">
+                  <Button
+                    variant={entry.type === "amount" ? "default" : "outline"}
+                    onClick={() => updateEntry(entry.id, "type", "amount")}
+                    className={
+                      entry.type === "amount"
+                        ? "flex-1 bg-indigo-600 hover:bg-indigo-700"
+                        : "flex-1"
+                    }
+                    size="sm"
+                  >
+                    Fixed Amount
+                  </Button>
+                  <Button
+                    variant={entry.type === "percentage" ? "default" : "outline"}
+                    onClick={() => updateEntry(entry.id, "type", "percentage")}
+                    className={
+                      entry.type === "percentage"
+                        ? "flex-1 bg-indigo-600 hover:bg-indigo-700"
+                        : "flex-1"
+                    }
+                    size="sm"
+                  >
+                    Percentage
+                  </Button>
+                </div>
 
-            {savingsValue > 0 && (
-              <div className="bg-emerald-50 rounded-lg p-4 space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span className="text-emerald-700">You'll save</span>
+                <div>
+                  <Label className="text-sm text-slate-600">
+                    {entry.type === "amount" ? `Amount (${currency})` : "Percentage (%)"}
+                  </Label>
+                  {entry.type === "amount" ? (
+                    <CurrencyInput
+                      value={entry.value}
+                      onChange={(value) => updateEntry(entry.id, "value", value)}
+                      placeholder="0"
+                      className="mt-1"
+                    />
+                  ) : (
+                    <Input
+                      type="number"
+                      placeholder="10"
+                      value={entry.value || ""}
+                      onChange={(e) =>
+                        updateEntry(entry.id, "value", parseFloat(e.target.value) || 0)
+                      }
+                      className="mt-1"
+                    />
+                  )}
+                </div>
+
+                {entry.value > 0 && (
+                  <div className="bg-emerald-50 rounded-lg p-3 text-sm">
+                    <span className="text-emerald-700">
+                      Saving {currency}
+                      {formatCurrency(calculateSavingsAmount(entry))}
+                    </span>
+                  </div>
+                )}
+              </div>
+            ))}
+
+            <Button
+              variant="outline"
+              onClick={addEntry}
+              className="w-full border-dashed"
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              Add another savings goal
+            </Button>
+
+            {totalSavings > 0 && (
+              <div className="bg-emerald-50 rounded-lg p-4 space-y-2 mt-4">
+                <div className="flex justify-between">
+                  <span className="text-emerald-700">Total savings</span>
                   <span className="text-emerald-800">
-                    {currency}{savingsAmount.toLocaleString()}
+                    {currency}
+                    {formatCurrency(totalSavings)}
                   </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-slate-700">This leaves you</span>
-                  <span
-                    className={
-                      afterSavings >= 0 ? "text-slate-800" : "text-red-600"
-                    }
-                  >
-                    {currency}{afterSavings.toLocaleString()}
+                  <span className={afterSavings >= 0 ? "text-slate-800" : "text-red-600"}>
+                    {currency}
+                    {formatCurrency(afterSavings)}
                   </span>
                 </div>
               </div>

@@ -1,5 +1,6 @@
 import { Sparkles } from "lucide-react";
 import { Button } from "./ui/button";
+import { formatCurrency } from "@/app/utils/formatCurrency";
 
 interface SafeToSpendProps {
   safeToSpend: number;
@@ -29,7 +30,7 @@ export function SafeToSpend({
         </div>
         <h2 className="text-slate-800 mb-3">Safe to spend this month</h2>
         <div className="text-6xl text-indigo-600 mb-4">
-          {currency}{safeToSpend.toLocaleString()}
+          {currency}{formatCurrency(safeToSpend)}
         </div>
         <p className="text-slate-600 max-w-md mx-auto">
           This is what you have left after covering priorities and savings.
@@ -42,24 +43,24 @@ export function SafeToSpend({
         <div className="space-y-3">
           <div className="flex justify-between items-center">
             <span className="text-slate-600">Total income</span>
-            <span className="text-slate-800">{currency}{totalIncome.toLocaleString()}</span>
+            <span className="text-slate-800">{currency}{formatCurrency(totalIncome)}</span>
           </div>
           <div className="h-px bg-slate-200" />
           <div className="flex justify-between items-center">
             <span className="text-slate-600">Priority expenses</span>
-            <span className="text-slate-700">-{currency}{totalPriorities.toLocaleString()}</span>
+            <span className="text-slate-700">-{currency}{formatCurrency(totalPriorities)}</span>
           </div>
           {totalSavings > 0 && (
             <div className="flex justify-between items-center">
               <span className="text-slate-600">Savings</span>
-              <span className="text-slate-700">-{currency}{totalSavings.toLocaleString()}</span>
+              <span className="text-slate-700">-{currency}{formatCurrency(totalSavings)}</span>
             </div>
           )}
           <div className="h-px bg-slate-200" />
           <div className="flex justify-between items-center">
             <span className="text-slate-800">Safe to spend</span>
             <span className="text-indigo-600">
-              {currency}{safeToSpend.toLocaleString()}
+              {currency}{formatCurrency(safeToSpend)}
             </span>
           </div>
         </div>

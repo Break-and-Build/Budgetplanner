@@ -18,8 +18,7 @@ export default function App() {
   const [expenses, setExpenses] = useState<PriorityExpense[]>([]);
   const [savings, setSavings] = useState<SavingsData>({
     enabled: false,
-    type: "amount",
-    value: 0,
+    entries: [],
   });
   const [buckets, setBuckets] = useState<BucketsData>({
     needs: 0,
@@ -37,12 +36,15 @@ export default function App() {
   const totalPriorities = expenses.reduce((sum, e) => sum + e.amount, 0);
   const remainingAfterPriorities = totalIncome - totalPriorities;
 
-  const savingsAmount =
-    savings.enabled && savings.type === "percentage"
-      ? (remainingAfterPriorities * savings.value) / 100
-      : savings.enabled
-      ? savings.value
-      : 0;
+  const savingsAmount = savings.enabled
+    ? savings.entries.reduce((sum, entry) => {
+        const amount =
+          entry.type === "percentage"
+            ? (remainingAfterPriorities * entry.value) / 100
+            : entry.value;
+        return sum + amount;
+      }, 0)
+    : 0;
 
   const safeToSpend = remainingAfterPriorities - savingsAmount;
 
@@ -54,7 +56,7 @@ export default function App() {
     setIsComplete(false);
     setIncomeSources([]);
     setExpenses([]);
-    setSavings({ enabled: false, type: "amount", value: 0 });
+    setSavings({ enabled: false, entries: [] });
     setBuckets({ needs: 0, lifestyle: 0, niceToHave: 0 });
     setReflection({ tight: "", flexible: "", intentional: "" });
   };

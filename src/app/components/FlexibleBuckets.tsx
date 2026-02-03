@@ -3,6 +3,7 @@ import { Home, Coffee, Star } from "lucide-react";
 import { Button } from "./ui/button";
 import { CurrencyInput } from "./CurrencyInput";
 import { Label } from "./ui/label";
+import { formatCurrency } from "@/app/utils/formatCurrency";
 
 export interface BucketsData {
   needs: number;
@@ -44,7 +45,7 @@ export function FlexibleBuckets({
       <div className="text-center mb-8">
         <h2 className="text-slate-800 mb-2">Allocate your spending (optional)</h2>
         <p className="text-slate-600">
-          Break down your {currency}{safeToSpend.toLocaleString()} into simple buckets.
+          Break down your {currency}{formatCurrency(safeToSpend)} into simple buckets.
           This is flexible—adjust as you go.
         </p>
       </div>
@@ -121,12 +122,12 @@ export function FlexibleBuckets({
         <div className="mt-6 bg-slate-50 rounded-xl p-4 border border-slate-200">
           <div className="flex justify-between text-sm mb-1">
             <span className="text-slate-600">Allocated</span>
-            <span className="text-slate-800">{currency}{totalAllocated.toLocaleString()}</span>
+            <span className="text-slate-800">{currency}{formatCurrency(totalAllocated)}</span>
           </div>
           <div className="flex justify-between">
             <span className="text-slate-600">Remaining</span>
             <span className={remaining >= 0 ? "text-slate-800" : "text-red-600"}>
-              {currency}{remaining.toLocaleString()}
+              {currency}{formatCurrency(remaining)}
             </span>
           </div>
         </div>
