@@ -5,6 +5,7 @@ import { CurrencyInput } from "./CurrencyInput";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
+import { formatCurrency } from "@/app/utils/formatCurrency";
 
 export interface IncomeSource {
   id: string;
@@ -64,10 +65,12 @@ export function IncomeSetup({ incomeSources, currency, onUpdateIncome, onUpdateC
       </div>
 
       {/* Currency Selector */}
-      <div className="mb-6">
-        <Label htmlFor="currency">Select your currency</Label>
+      <div className="mb-6 bg-white rounded-2xl border border-slate-200 p-6">
+        <Label htmlFor="currency" className="text-slate-800 text-lg mb-3 block">
+          Select your currency
+        </Label>
         <Select value={currency} onValueChange={onUpdateCurrency}>
-          <SelectTrigger id="currency" className="w-full md:w-64">
+          <SelectTrigger id="currency" className="w-full h-12 text-base">
             <SelectValue placeholder="Select currency" />
           </SelectTrigger>
           <SelectContent>
@@ -84,48 +87,50 @@ export function IncomeSetup({ incomeSources, currency, onUpdateIncome, onUpdateC
         </Select>
       </div>
 
-      <div className="bg-white rounded-2xl border border-slate-200 p-6 space-y-4">
-        {sources.map((source, index) => (
-          <div key={source.id} className="flex gap-3 items-end">
-            <div className="flex-1">
-              <Label htmlFor={`source-name-${source.id}`}>
-                {index === 0 ? "Source name" : ""}
-              </Label>
+      <div className="bg-white rounded-2xl border border-slate-200 p-6">
+        <div className="grid grid-cols-2 gap-3 mb-3">
+          <div>
+            <Label className="text-slate-800">Source name</Label>
+          </div>
+          <div>
+            <Label className="text-slate-800">Amount ({currency})</Label>
+          </div>
+        </div>
+        
+        <div className="space-y-3">
+          {sources.map((source) => (
+            <div key={source.id} className="grid grid-cols-2 gap-3 items-center">
               <Input
-                id={`source-name-${source.id}`}
                 placeholder="e.g., Salary, Freelance"
                 value={source.name}
                 onChange={(e) => updateSource(source.id, "name", e.target.value)}
               />
+              <div className="flex gap-2">
+                <CurrencyInput
+                  value={source.amount}
+                  onChange={(value) => updateSource(source.id, "amount", value)}
+                  placeholder="0"
+                  className="flex-1"
+                />
+                {sources.length > 1 && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => removeSource(source.id)}
+                    className="text-slate-400 hover:text-red-500"
+                  >
+                    <Trash className="w-4 h-4" />
+                  </Button>
+                )}
+              </div>
             </div>
-            <div className="flex-1">
-              <Label htmlFor={`source-amount-${source.id}`}>
-                {index === 0 ? `Amount (${currency})` : ""}
-              </Label>
-              <CurrencyInput
-                id={`source-amount-${source.id}`}
-                value={source.amount}
-                onChange={(value) => updateSource(source.id, "amount", value)}
-                placeholder="0"
-              />
-            </div>
-            {sources.length > 1 && (
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => removeSource(source.id)}
-                className="text-slate-400 hover:text-red-500"
-              >
-                <Trash className="w-4 h-4" />
-              </Button>
-            )}
-          </div>
-        ))}
+          ))}
+        </div>
 
         <Button
           variant="outline"
           onClick={addSource}
-          className="w-full border-dashed"
+          className="w-full border-dashed mt-4"
         >
           <Plus className="w-4 h-4 mr-2" />
           Add another income source
@@ -136,7 +141,7 @@ export function IncomeSetup({ incomeSources, currency, onUpdateIncome, onUpdateC
         <div className="mt-6 text-center">
           <p className="text-slate-600 text-sm">Total monthly income</p>
           <p className="text-slate-800 text-3xl mt-1">
-            {currency}{totalIncome.toLocaleString()}
+            {currency}{formatCurrency(totalIncome)}
           </p>
         </div>
       )}

@@ -5,6 +5,7 @@ import { PriorityExpense } from "./PriorityExpenses";
 import { SavingsData } from "./SavingsAllocation";
 import { BucketsData } from "./FlexibleBuckets";
 import { ReflectionData } from "./MonthlyReflection";
+import { formatCurrency } from "@/app/utils/formatCurrency";
 
 interface CompletedPlanProps {
   income: IncomeSource[];
@@ -29,12 +30,17 @@ export function CompletedPlan({
 }: CompletedPlanProps) {
   const totalIncome = income.reduce((sum, s) => sum + s.amount, 0);
   const totalExpenses = expenses.reduce((sum, e) => sum + e.amount, 0);
-  const savingsAmount =
-    savings.enabled && savings.type === "percentage"
-      ? ((totalIncome - totalExpenses) * savings.value) / 100
-      : savings.enabled
-      ? savings.value
-      : 0;
+  const remainingAfterPriorities = totalIncome - totalExpenses;
+  
+  const savingsAmount = savings.enabled
+    ? savings.entries.reduce((sum, entry) => {
+        const amount =
+          entry.type === "percentage"
+            ? (remainingAfterPriorities * entry.value) / 100
+            : entry.value;
+        return sum + amount;
+      }, 0)
+    : 0;
 
   return (
     <div className="max-w-4xl mx-auto">
@@ -48,7 +54,7 @@ export function CompletedPlan({
       {/* Hero: Safe to Spend */}
       <div className="bg-gradient-to-br from-indigo-500 to-purple-600 rounded-3xl p-8 mb-8 text-white text-center">
         <p className="text-indigo-100 text-sm mb-2">Safe to spend</p>
-        <div className="text-6xl mb-3">{currency}{safeToSpend.toLocaleString()}</div>
+        <div className="text-6xl mb-3">{currency}{formatCurrency(safeToSpend)}</div>
         <p className="text-indigo-100 text-sm max-w-md mx-auto">
           After priorities and savings, this is what you can confidently spend
         </p>
@@ -65,13 +71,13 @@ export function CompletedPlan({
             {income.map((source) => (
               <div key={source.id} className="flex justify-between text-sm">
                 <span className="text-slate-600">{source.name}</span>
-                <span className="text-slate-800">{currency}{source.amount.toLocaleString()}</span>
+                <span className="text-slate-800">{currency}{formatCurrency(source.amount)}</span>
               </div>
             ))}
             <div className="h-px bg-slate-200 my-2" />
             <div className="flex justify-between">
               <span className="text-slate-800">Total</span>
-              <span className="text-slate-800">{currency}{totalIncome.toLocaleString()}</span>
+              <span className="text-slate-800">{currency}{formatCurrency(totalIncome)}</span>
             </div>
           </div>
         </div>
@@ -90,7 +96,7 @@ export function CompletedPlan({
                     {expense.name}
                     {expense.isFixed && <Lock className="w-3 h-3 text-slate-400" />}
                   </span>
-                  <span className="text-slate-800">{currency}{expense.amount.toLocaleString()}</span>
+                  <span className="text-slate-800">{currency}{formatCurrency(expense.amount)}</span>
                 </div>
               ))
             ) : (
@@ -101,7 +107,7 @@ export function CompletedPlan({
                 <div className="h-px bg-slate-200 my-2" />
                 <div className="flex justify-between">
                   <span className="text-slate-800">Total</span>
-                  <span className="text-slate-800">{currency}{totalExpenses.toLocaleString()}</span>
+                  <span className="text-slate-800">{currency}{formatCurrency(totalExpenses)}</span>
                 </div>
               </>
             )}
@@ -109,20 +115,34 @@ export function CompletedPlan({
         </div>
 
         {/* Savings */}
-        {savings.enabled && (
+        {savings.enabled && savings.entries.length > 0 && (
           <div className="bg-white rounded-2xl border border-slate-200 p-6">
             <div className="flex items-center gap-2 mb-4">
               <PiggyBank className="w-5 h-5 text-emerald-600" />
               <h3 className="text-slate-800">Savings</h3>
             </div>
             <div className="space-y-2">
-              <div className="flex justify-between text-sm">
-                <span className="text-slate-600">
-                  {savings.type === "percentage"
-                    ? `${savings.value}% of remaining`
-                    : "Fixed amount"}
-                </span>
-                <span className="text-slate-800">{currency}{savingsAmount.toLocaleString()}</span>
+              {savings.entries.map((entry) => {
+                const amount =
+                  entry.type === "percentage"
+                    ? (remainingAfterPriorities * entry.value) / 100
+                    : entry.value;
+                return (
+                  <div key={entry.id} className="flex justify-between text-sm">
+                    <span className="text-slate-600">
+                      {entry.name}
+                      {entry.type === "percentage" && (
+                        <span className="text-slate-400 ml-1">({entry.value}%)</span>
+                      )}
+                    </span>
+                    <span className="text-slate-800">{currency}{formatCurrency(amount)}</span>
+                  </div>
+                );
+              })}
+              <div className="h-px bg-slate-200 my-2" />
+              <div className="flex justify-between">
+                <span className="text-slate-800">Total</span>
+                <span className="text-emerald-600">{currency}{formatCurrency(savingsAmount)}</span>
               </div>
             </div>
           </div>
@@ -141,7 +161,7 @@ export function CompletedPlan({
                   <div className="flex-1">
                     <div className="text-sm text-slate-600">Needs</div>
                   </div>
-                  <span className="text-slate-800">{currency}{buckets.needs.toLocaleString()}</span>
+                  <span className="text-slate-800">{currency}{formatCurrency(buckets.needs)}</span>
                 </div>
               )}
               {buckets.lifestyle > 0 && (
@@ -152,7 +172,7 @@ export function CompletedPlan({
                   <div className="flex-1">
                     <div className="text-sm text-slate-600">Lifestyle</div>
                   </div>
-                  <span className="text-slate-800">{currency}{buckets.lifestyle.toLocaleString()}</span>
+                  <span className="text-slate-800">{currency}{formatCurrency(buckets.lifestyle)}</span>
                 </div>
               )}
               {buckets.niceToHave > 0 && (
@@ -163,7 +183,7 @@ export function CompletedPlan({
                   <div className="flex-1">
                     <div className="text-sm text-slate-600">Nice-to-have</div>
                   </div>
-                  <span className="text-slate-800">{currency}{buckets.niceToHave.toLocaleString()}</span>
+                  <span className="text-slate-800">{currency}{formatCurrency(buckets.niceToHave)}</span>
                 </div>
               )}
             </div>

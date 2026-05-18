@@ -1,0 +1,42 @@
+# macOS metadata
+.DS_Store
+**/.DS_Store
+
+# Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Vite / web build
+dist/
+*.local
+
+# Expo / React Native
+.expo/
+.expo-shared/
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+*.orig.*
+web-build/
+
+# Metro
+.metro-health-check*
+
+# IDE
+.vscode/
+.idea/
+
+# Local Claude state (worktrees / agent caches)
+.claude/worktrees/
+
+# Logs
+*.log
+
+# Env
+.env
+.env.local
+.env.*.local

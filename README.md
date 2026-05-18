@@ -1,11 +1,51 @@
+# Priority-Based Budget Planner
 
-  # Priority-Based Budget Planner
+A budget planning application available as both a web app and native mobile app (iOS/Android).
 
-  This is a code bundle for Priority-Based Budget Planner. The original project is available at https://www.figma.com/design/N3Yey2Txq73VLIftH9UlWP/Priority-Based-Budget-Planner.
+## Project Structure
 
-  ## Running the code
+This is a monorepo containing:
 
-  Run `npm i` to install the dependencies.
+- **Web App** (`src/`) - React + Vite web application
+- **Mobile App** (`apps/mobile/`) - React Native + Expo mobile application
+- **Shared Core** (`packages/core/`) - Shared business logic, types, and utilities
 
-  Run `npm run dev` to start the development server.
-  
+## Running the Web App
+
+```bash
+npm install
+npm run dev
+```
+
+## Running the Mobile App
+
+```bash
+cd apps/mobile
+npm install
+npm start
+```
+
+Then choose to run on iOS simulator, Android emulator, or scan QR code with Expo Go app.
+
+## Building for Production
+
+### Web
+```bash
+npm run build
+```
+
+### Mobile (iOS/Android)
+```bash
+cd apps/mobile
+eas build --platform ios
+eas build --platform android
+```
+
+## Shared Code
+
+The `packages/core/` package contains:
+- Type definitions (IncomeSource, PriorityExpense, SavingsData, etc.)
+- Calculation functions (calcTotalIncome, calcSafeToSpend, etc.)
+- Currency formatting utilities
+
+Both web and mobile apps import from this shared package to ensure consistency.
