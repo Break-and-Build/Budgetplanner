@@ -25,6 +25,7 @@ import { TabShell } from '../components/TabShell';
 import { AmountDisplay } from '../components/AmountDisplay';
 import { CategoryBar } from '../components/CategoryBar';
 import { TransactionRow } from '../components/TransactionRow';
+import { Button } from '../components/ui/Button';
 import { useBudget } from '../state/BudgetContext';
 import { CATEGORY_IDS, CATEGORY_LABELS } from '../state/categories';
 import {
@@ -251,65 +252,24 @@ export function HomeScreen() {
             <View style={{ flexDirection: 'row', gap: t.space[3], marginTop: t.space[4] }}>
               {!overdue ? (
                 <View style={{ flex: 1 }}>
-                  <Pressable
+                  <Button
+                    variant="secondary"
                     onPress={dismissMonthCloseBanner}
-                    accessibilityRole="button"
-                    accessibilityLabel="Not yet"
-                    style={({ pressed }) => ({
-                      minHeight: 40,
-                      paddingHorizontal: t.space[3],
-                      borderRadius: t.radii.md,
-                      borderWidth: StyleSheet.hairlineWidth,
-                      borderColor: t.color.border.divider,
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      backgroundColor: pressed
-                        ? t.color.bg.sunken
-                        : 'transparent',
-                    })}
+                    fullWidth
                   >
-                    <Text
-                      style={[
-                        t.type.subhead,
-                        {
-                          color: t.color.text.primary,
-                          fontWeight: t.fontWeight.medium,
-                        },
-                      ]}
-                    >
-                      Not yet
-                    </Text>
-                  </Pressable>
+                    Not yet
+                  </Button>
                 </View>
               ) : null}
               <View style={{ flex: overdue ? 1 : 2 }}>
-                <Pressable
+                <Button
+                  variant="primary"
                   onPress={() => nav.navigate('MonthClose')}
-                  accessibilityRole="button"
+                  fullWidth
                   accessibilityLabel="Close out the month"
-                  style={({ pressed }) => ({
-                    minHeight: 40,
-                    paddingHorizontal: t.space[3],
-                    borderRadius: t.radii.md,
-                    backgroundColor: pressed
-                      ? t.color.fab.pressed
-                      : t.color.text.primary,
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  })}
                 >
-                  <Text
-                    style={[
-                      t.type.subhead,
-                      {
-                        color: t.color.text.inverse,
-                        fontWeight: t.fontWeight.semibold,
-                      },
-                    ]}
-                  >
-                    Close out
-                  </Text>
-                </Pressable>
+                  Close out
+                </Button>
               </View>
             </View>
           </View>

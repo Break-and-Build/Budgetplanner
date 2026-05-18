@@ -42,6 +42,8 @@ const category = {
 const status = {
   /** Used only on the "over budget" caption under a category bar. Muted red. */
   overBudget: '#B84A4A',
+  /** Pressed state for filled destructive surfaces (Button.destructive). */
+  overBudgetPressed: '#9A3D3D',
   /** Warning (e.g., "no income added yet"). Warm amber, used sparingly. */
   warning: '#C9913B',
   /** Success is implicit in the category palette; we don't need a separate green. */
@@ -153,6 +155,7 @@ const colorDark = {
   category: categoryDark,
   status: {
     overBudget: '#E07A7A',
+    overBudgetPressed: '#B86060',
     warning: '#E4B26A',
   },
   tabBar: {

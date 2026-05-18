@@ -81,7 +81,9 @@ export function Button({
         variant === 'destructive' && {
           // Filled red on rest, darker red on press — same pattern as primary
           // (ink on rest, darker ink on press). No border on a filled variant.
-          backgroundColor: pressed ? '#9A3D3D' : t.color.status.overBudget,
+          backgroundColor: pressed
+            ? t.color.status.overBudgetPressed
+            : t.color.status.overBudget,
         },
         style,
       ]}
