@@ -1,164 +1,145 @@
-import { useState } from "react";
-import { ProgressIndicator } from "./components/ProgressIndicator";
-import { IncomeSetup, IncomeSource } from "./components/IncomeSetup";
-import { PriorityExpenses, PriorityExpense } from "./components/PriorityExpenses";
-import { SavingsAllocation, SavingsData } from "./components/SavingsAllocation";
-import { SafeToSpend } from "./components/SafeToSpend";
-import { FlexibleBuckets, BucketsData } from "./components/FlexibleBuckets";
-import { MonthlyReflection, ReflectionData } from "./components/MonthlyReflection";
-import { CompletedPlan } from "./components/CompletedPlan";
+/**
+ * Web preview entry — renders the mobile HomeScreen design inside a phone
+ * frame so the design intent reads correctly in the browser.
+ *
+ * The real mobile app lives in `apps/mobile/` (Expo + React Native). This
+ * file exists so design iterations can be previewed without spinning up the
+ * mobile simulator.
+ *
+ * Prior to the budget tracker rebuild, `src/app/App.tsx` was a weather app —
+ * it's preserved as `WeatherApp.tsx` for reference and is currently unused.
+ */
+
+import { BudgetHomeScreen } from './budget/HomeScreen';
+import { SYSTEM_FONT, tokens } from './budget/tokens';
 
 export default function App() {
-  const [currentStep, setCurrentStep] = useState(1);
-  const [isComplete, setIsComplete] = useState(false);
-  const [currency, setCurrency] = useState("₦");
+  return (
+    <div
+      style={{
+        minHeight: '100vh',
+        background:
+          'radial-gradient(circle at top, #ECECE8 0%, #DFDED8 50%, #D4D3CC 100%)',
+        fontFamily: SYSTEM_FONT,
+        padding: '32px 16px',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        gap: 24,
+      }}
+    >
+      {/* Caption above the device frame */}
+      <div style={{ maxWidth: 412, width: '100%', color: '#5A5A60' }}>
+        <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.8px', textTransform: 'uppercase' }}>
+          Budget Tracker · v1 design preview
+        </div>
+        <div style={{ fontSize: 13, marginTop: 4, color: '#7A7A80' }}>
+          Mobile HomeScreen (`apps/mobile/src/screens/HomeScreen.tsx`) ported for browser preview.
+          Mock month — May 2026. Reference date: May 17.
+        </div>
+      </div>
 
-  // State for each step
-  const [incomeSources, setIncomeSources] = useState<IncomeSource[]>([]);
-  const [expenses, setExpenses] = useState<PriorityExpense[]>([]);
-  const [savings, setSavings] = useState<SavingsData>({
-    enabled: false,
-    entries: [],
-  });
-  const [buckets, setBuckets] = useState<BucketsData>({
-    needs: 0,
-    lifestyle: 0,
-    niceToHave: 0,
-  });
-  const [reflection, setReflection] = useState<ReflectionData>({
-    tight: "",
-    flexible: "",
-    intentional: "",
-  });
+      {/* Phone frame */}
+      <div
+        style={{
+          width: '100%',
+          maxWidth: 412,
+          aspectRatio: '9 / 19.5',
+          minHeight: 800,
+          borderRadius: 44,
+          backgroundColor: tokens.color.bg.base,
+          border: '10px solid #1B1B1F',
+          boxShadow: '0 30px 60px rgba(0,0,0,0.18), 0 6px 14px rgba(0,0,0,0.08)',
+          overflow: 'hidden',
+          position: 'relative',
+        }}
+      >
+        {/* Status-bar simulation */}
+        <div
+          style={{
+            height: 44,
+            paddingTop: 12,
+            paddingLeft: 24,
+            paddingRight: 24,
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            background: tokens.color.bg.base,
+            fontSize: 13,
+            fontWeight: 600,
+            color: tokens.color.text.primary,
+            position: 'relative',
+          }}
+        >
+          <span style={{ fontVariantNumeric: 'tabular-nums' }}>9:41</span>
+          {/* Dynamic-island stand-in */}
+          <span
+            style={{
+              position: 'absolute',
+              left: '50%',
+              top: 6,
+              transform: 'translateX(-50%)',
+              width: 90,
+              height: 26,
+              background: '#0A0A0E',
+              borderRadius: 16,
+            }}
+          />
+          <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+            <SignalDots />
+            <BatteryIcon />
+          </span>
+        </div>
 
-  // Calculations
-  const totalIncome = incomeSources.reduce((sum, s) => sum + s.amount, 0);
-  const totalPriorities = expenses.reduce((sum, e) => sum + e.amount, 0);
-  const remainingAfterPriorities = totalIncome - totalPriorities;
+        {/* Actual content */}
+        <div style={{ position: 'absolute', inset: 44 + 0 + 'px 0 0 0', overflowY: 'auto' }}>
+          <BudgetHomeScreen />
+        </div>
 
-  const savingsAmount = savings.enabled
-    ? savings.entries.reduce((sum, entry) => {
-        const amount =
-          entry.type === "percentage"
-            ? (remainingAfterPriorities * entry.value) / 100
-            : entry.value;
-        return sum + amount;
-      }, 0)
-    : 0;
-
-  const safeToSpend = remainingAfterPriorities - savingsAmount;
-
-  const handleNext = () => setCurrentStep((prev) => prev + 1);
-  const handleBack = () => setCurrentStep((prev) => prev - 1);
-  const handleFinish = () => setIsComplete(true);
-  const handleReset = () => {
-    setCurrentStep(1);
-    setIsComplete(false);
-    setIncomeSources([]);
-    setExpenses([]);
-    setSavings({ enabled: false, entries: [] });
-    setBuckets({ needs: 0, lifestyle: 0, niceToHave: 0 });
-    setReflection({ tight: "", flexible: "", intentional: "" });
-  };
-
-  if (isComplete) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-indigo-50 to-purple-50 py-12 px-4">
-        <CompletedPlan
-          income={incomeSources}
-          expenses={expenses}
-          savings={savings}
-          buckets={buckets}
-          reflection={reflection}
-          safeToSpend={safeToSpend}
-          currency={currency}
-          onReset={handleReset}
+        {/* Home indicator */}
+        <div
+          style={{
+            position: 'absolute',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            bottom: 8,
+            width: 134,
+            height: 5,
+            borderRadius: 3,
+            background: '#15151A',
+            opacity: 0.65,
+          }}
         />
       </div>
-    );
-  }
 
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-indigo-50 to-purple-50 py-12 px-4">
-      <div className="max-w-4xl mx-auto">
-        {/* Header */}
-        <div className="text-center mb-8">
-          <h1 className="text-slate-800 mb-2">Priority-Based Budget Planner</h1>
-          <p className="text-slate-600">
-            Plan your month with confidence and clarity
-          </p>
-        </div>
-
-        {/* Progress Indicator */}
-        <ProgressIndicator currentStep={currentStep} totalSteps={6} />
-
-        {/* Step Content */}
-        <div className="mt-12">
-          {currentStep === 1 && (
-            <IncomeSetup
-              incomeSources={incomeSources}
-              currency={currency}
-              onUpdateIncome={setIncomeSources}
-              onUpdateCurrency={setCurrency}
-              onNext={handleNext}
-            />
-          )}
-
-          {currentStep === 2 && (
-            <PriorityExpenses
-              expenses={expenses}
-              onUpdateExpenses={setExpenses}
-              onNext={handleNext}
-              onBack={handleBack}
-              totalIncome={totalIncome}
-              currency={currency}
-            />
-          )}
-
-          {currentStep === 3 && (
-            <SavingsAllocation
-              savings={savings}
-              onUpdateSavings={setSavings}
-              onNext={handleNext}
-              onBack={handleBack}
-              remainingAfterPriorities={remainingAfterPriorities}
-              currency={currency}
-            />
-          )}
-
-          {currentStep === 4 && (
-            <SafeToSpend
-              safeToSpend={safeToSpend}
-              totalIncome={totalIncome}
-              totalPriorities={totalPriorities}
-              totalSavings={savingsAmount}
-              onNext={handleNext}
-              onBack={handleBack}
-              currency={currency}
-            />
-          )}
-
-          {currentStep === 5 && (
-            <FlexibleBuckets
-              buckets={buckets}
-              onUpdateBuckets={setBuckets}
-              onNext={handleNext}
-              onBack={handleBack}
-              safeToSpend={safeToSpend}
-              currency={currency}
-            />
-          )}
-
-          {currentStep === 6 && (
-            <MonthlyReflection
-              reflection={reflection}
-              onUpdateReflection={setReflection}
-              onFinish={handleFinish}
-              onBack={handleBack}
-            />
-          )}
-        </div>
+      {/* Small legend below */}
+      <div style={{ maxWidth: 412, width: '100%', fontSize: 11, color: '#7A7A80', lineHeight: 1.6 }}>
+        <strong style={{ color: '#5A5A60' }}>What's wired:</strong>{' '}
+        plan-vs-actual math, days-left calc, today's-spent subtraction, category
+        bar fill ratios, recent activity. Buttons are visual-only in this
+        preview — FastLogSheet, Settings modal, CategoryDetail are upcoming Phase 6 tasks.
       </div>
     </div>
+  );
+}
+
+// Tiny SF-style status bar icons
+function SignalDots() {
+  return (
+    <svg width={18} height={10} viewBox="0 0 18 10" fill="currentColor">
+      <rect x={0} y={6} width={3} height={4} rx={0.5} />
+      <rect x={5} y={4} width={3} height={6} rx={0.5} />
+      <rect x={10} y={2} width={3} height={8} rx={0.5} />
+      <rect x={15} y={0} width={3} height={10} rx={0.5} />
+    </svg>
+  );
+}
+function BatteryIcon() {
+  return (
+    <svg width={26} height={12} viewBox="0 0 26 12" fill="none">
+      <rect x={0.5} y={0.5} width={22} height={11} rx={3} stroke="currentColor" />
+      <rect x={2} y={2} width={17} height={8} rx={1.5} fill="currentColor" />
+      <rect x={23.5} y={3.5} width={1.5} height={5} rx={0.5} fill="currentColor" />
+    </svg>
   );
 }

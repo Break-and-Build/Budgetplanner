@@ -1,6 +1,14 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, Modal, StyleSheet, ScrollView } from 'react-native';
-import { ChevronDown } from 'lucide-react-native';
+import {
+  View,
+  Text,
+  Pressable,
+  Modal,
+  StyleSheet,
+  ScrollView,
+} from 'react-native';
+import { ChevronDown, Check } from 'lucide-react-native';
+import { useTokens } from '../../theme/ThemeProvider';
 
 interface SelectItem {
   label: string;
@@ -12,102 +20,143 @@ interface SelectProps {
   onValueChange: (value: string) => void;
   items: SelectItem[];
   placeholder?: string;
+  accessibilityLabel?: string;
 }
 
-export function Select({ value, onValueChange, items, placeholder }: SelectProps) {
-  const [isOpen, setIsOpen] = useState(false);
-  const selectedItem = items.find(item => item.value === value);
+/**
+ * Inline picker. Tap → centered modal with a scrollable list. The selected
+ * row gets a check mark (not a fill color) — keeps the Apple-Wallet vibe.
+ */
+export function Select({
+  value,
+  onValueChange,
+  items,
+  placeholder = 'Select…',
+  accessibilityLabel,
+}: SelectProps) {
+  const t = useTokens();
+  const [open, setOpen] = useState(false);
+  const selected = items.find((item) => item.value === value);
 
   return (
     <>
-      <TouchableOpacity
-        onPress={() => setIsOpen(true)}
-        style={styles.trigger}
+      <Pressable
+        onPress={() => setOpen(true)}
+        accessibilityRole="button"
+        accessibilityLabel={accessibilityLabel ?? placeholder}
+        accessibilityState={{ expanded: open }}
+        style={({ pressed }) => [
+          {
+            minHeight: 48,
+            backgroundColor: pressed ? t.color.bg.sunken : t.color.bg.elevated,
+            borderRadius: t.radii.md,
+            paddingHorizontal: t.space[4],
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            borderWidth: StyleSheet.hairlineWidth,
+            borderColor: t.color.border.hairline,
+          },
+        ]}
       >
-        <Text style={styles.triggerText}>
-          {selectedItem ? selectedItem.label : placeholder || 'Select...'}
+        <Text
+          allowFontScaling
+          maxFontSizeMultiplier={t.a11y.maxFontScale}
+          style={[
+            t.type.body,
+            { color: selected ? t.color.text.primary : t.color.text.tertiary },
+          ]}
+          numberOfLines={1}
+        >
+          {selected ? selected.label : placeholder}
         </Text>
-        <ChevronDown size={20} color="#64748b" />
-      </TouchableOpacity>
+        <ChevronDown size={20} color={t.color.text.secondary} />
+      </Pressable>
 
       <Modal
-        visible={isOpen}
+        visible={open}
         transparent
         animationType="fade"
-        onRequestClose={() => setIsOpen(false)}
+        onRequestClose={() => setOpen(false)}
       >
-        <TouchableOpacity
-          style={styles.modalOverlay}
-          activeOpacity={1}
-          onPress={() => setIsOpen(false)}
+        <Pressable
+          accessibilityLabel="Close menu"
+          style={[styles.backdrop, { backgroundColor: t.color.bg.overlay }]}
+          onPress={() => setOpen(false)}
         >
-          <View style={styles.modalContent}>
-            <ScrollView>
-              {items.map((item) => (
-                <TouchableOpacity
-                  key={item.value}
-                  onPress={() => {
-                    onValueChange(item.value);
-                    setIsOpen(false);
-                  }}
-                  style={[
-                    styles.item,
-                    value === item.value && styles.itemSelected,
-                  ]}
-                >
-                  <Text
-                    style={[
-                      styles.itemText,
-                      value === item.value && styles.itemTextSelected,
+          <View
+            style={[
+              styles.panel,
+              {
+                backgroundColor: t.color.bg.elevated,
+                borderRadius: t.radii.lg,
+                ...t.shadow.lg,
+              },
+            ]}
+          >
+            <ScrollView bounces={false}>
+              {items.map((item) => {
+                const isSelected = item.value === value;
+                return (
+                  <Pressable
+                    key={item.value}
+                    onPress={() => {
+                      onValueChange(item.value);
+                      setOpen(false);
+                    }}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected: isSelected }}
+                    style={({ pressed }) => [
+                      {
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        paddingHorizontal: t.space[4],
+                        paddingVertical: t.space[3],
+                        backgroundColor: pressed ? t.color.bg.sunken : 'transparent',
+                        borderBottomWidth: StyleSheet.hairlineWidth,
+                        borderBottomColor: t.color.border.hairline,
+                      },
                     ]}
                   >
-                    {item.label}
-                  </Text>
-                </TouchableOpacity>
-              ))}
+                    <Text
+                      allowFontScaling
+                      maxFontSizeMultiplier={t.a11y.maxFontScale}
+                      style={[
+                        t.type.body,
+                        {
+                          color: t.color.text.primary,
+                          fontWeight: isSelected ? t.fontWeight.semibold : t.fontWeight.regular,
+                        },
+                      ]}
+                    >
+                      {item.label}
+                    </Text>
+                    {isSelected ? (
+                      <Check size={18} color={t.color.text.primary} />
+                    ) : null}
+                  </Pressable>
+                );
+              })}
             </ScrollView>
           </View>
-        </TouchableOpacity>
+        </Pressable>
       </Modal>
     </>
   );
 }
 
 const styles = StyleSheet.create({
-  trigger: {
-    minHeight: 44,
-  },
-  triggerText: {
-    fontSize: 16,
-    color: '#1e293b',
-  },
-  modalOverlay: {
+  backdrop: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
     justifyContent: 'center',
     alignItems: 'center',
+    padding: 24,
   },
-  modalContent: {
-    backgroundColor: '#ffffff',
-    borderRadius: 12,
-    maxHeight: '80%',
-    width: '80%',
-    maxWidth: 400,
-  },
-  item: {
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e2e8f0',
-  },
-  itemSelected: {
-    backgroundColor: '#eef2ff',
-  },
-  itemText: {
-    fontSize: 16,
-    color: '#1e293b',
-  },
-  itemTextSelected: {
-    color: '#4f46e5',
-    fontWeight: '600',
+  panel: {
+    width: '100%',
+    maxWidth: 440,
+    maxHeight: '70%',
+    overflow: 'hidden',
   },
 });
