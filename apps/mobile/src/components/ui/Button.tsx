@@ -25,9 +25,15 @@ interface ButtonProps {
 }
 
 /**
- * The primary action primitive. Monochrome by default — primary uses ink, not
- * a brand color. Apple-Wallet calm: the button's job is to be tappable, not
- * to compete with the screen's hero number.
+ * The primary action primitive.
+ *
+ *   • primary     — filled indigo (the brand color). Press → darker indigo.
+ *   • secondary   — outlined card with neutral ink text. Cancel-style action.
+ *   • ghost       — transparent. Tertiary affordance, low emphasis.
+ *   • destructive — filled muted red, white text. Confirmation sheets.
+ *
+ * `lg` size is reserved for screens whose primary action is the screen's
+ * focal point (FastLog "Log", Setup "Continue"). `md` is the default.
  */
 export function Button({
   children,
@@ -68,7 +74,8 @@ export function Button({
           width: fullWidth ? '100%' : undefined,
         },
         variant === 'primary' && {
-          backgroundColor: pressed ? t.color.fab.pressed : t.color.text.primary,
+          // Filled brand (indigo). Filled-pressed = darker indigo.
+          backgroundColor: pressed ? t.color.brand.pressed : t.color.brand.base,
         },
         variant === 'secondary' && {
           backgroundColor: pressed ? t.color.bg.sunken : t.color.bg.elevated,

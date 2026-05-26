@@ -18,10 +18,28 @@
  */
 
 import 'react-native-gesture-handler';
-import React from 'react';
+import React, { useEffect } from 'react';
 import { StatusBar } from 'expo-status-bar';
+import * as SplashScreen from 'expo-splash-screen';
+import {
+  useFonts,
+  Poppins_400Regular,
+  Poppins_500Medium,
+  Poppins_600SemiBold,
+  Poppins_700Bold,
+} from '@expo-google-fonts/poppins';
 import { StyleSheet, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+
+// Keep the native splash visible until we explicitly hide it. Must be called
+// at module load — before any component renders — so the native splash
+// doesn't dismiss the moment React hands over the first frame.
+const APP_START = Date.now();
+SplashScreen.preventAutoHideAsync().catch(() => {
+  // Already hidden, that's fine.
+});
+/** Minimum total splash time (ms), measured from JS module load. */
+const MIN_SPLASH_MS = 1500;
 import { NavigationContainer, DefaultTheme } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
@@ -115,13 +133,27 @@ function MainTabs() {
   );
 }
 
-function Root() {
+function Root({ fontsLoaded }: { fontsLoaded: boolean }) {
   const { isHydrated, blob } = useBudget();
 
-  // Wait for AsyncStorage hydration before mounting the navigator. Showing a
-  // splash here prevents a flash of the wrong initial route (FirstRun vs.
-  // MainTabs) before we know whether setup has been completed.
-  if (!isHydrated) {
+  // Hide the native splash once BOTH font loading and AsyncStorage hydration
+  // have finished, but never before the minimum total splash time has elapsed.
+  // Gives the brand a beat to register without feeling like a stall.
+  useEffect(() => {
+    if (!isHydrated || !fontsLoaded) return;
+    const elapsed = Date.now() - APP_START;
+    const remaining = Math.max(0, MIN_SPLASH_MS - elapsed);
+    const id = setTimeout(() => {
+      SplashScreen.hideAsync().catch(() => {});
+    }, remaining);
+    return () => clearTimeout(id);
+  }, [isHydrated, fontsLoaded]);
+
+  // While hydrating or loading fonts, render an empty pane in the brand
+  // background color. The native splash is still up — this is just so React
+  // has a mounted tree ready behind it. Once fonts arrive, any text rendered
+  // here would use Poppins; pre-load there's nothing to render anyway.
+  if (!isHydrated || !fontsLoaded) {
     return <Splash />;
   }
 
@@ -180,12 +212,23 @@ function Root() {
 }
 
 export default function App() {
+  // Poppins is loaded here at the App root so it's ready before any screen
+  // renders. Splash stays up until BOTH fonts and hydration complete (see
+  // Root). useFonts handles caching across reloads — subsequent launches
+  // resolve nearly instantly.
+  const [fontsLoaded] = useFonts({
+    Poppins_400Regular,
+    Poppins_500Medium,
+    Poppins_600SemiBold,
+    Poppins_700Bold,
+  });
+
   return (
     <SafeAreaProvider>
       <ThemeProvider colorScheme="light">
         <BudgetProvider>
           <View style={styles.root}>
-            <Root />
+            <Root fontsLoaded={fontsLoaded} />
             {/* Global UI — sits above the navigator so it's available from
                 every screen via openFastLog() / showUndoSnackbar() in
                 BudgetContext. */}

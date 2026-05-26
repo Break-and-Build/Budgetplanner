@@ -255,8 +255,9 @@ export function TransactionDetailScreen() {
                       paddingVertical: t.space[2],
                       borderRadius: t.radii.pill,
                       minHeight: 36,
+                      // Selected → light-indigo tinted pill, matches Activity + FastLog.
                       backgroundColor: selected
-                        ? t.color.text.primary
+                        ? t.color.brand.tint
                         : pressed
                           ? t.color.bg.sunken
                           : 'transparent',
@@ -276,7 +277,7 @@ export function TransactionDetailScreen() {
                     style={[
                       t.type.subhead,
                       {
-                        color: selected ? t.color.text.inverse : t.color.text.primary,
+                        color: selected ? t.color.brand.base : t.color.text.primary,
                         fontWeight: selected ? t.fontWeight.semibold : t.fontWeight.regular,
                       },
                     ]}

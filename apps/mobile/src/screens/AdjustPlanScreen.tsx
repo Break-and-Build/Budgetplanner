@@ -151,14 +151,14 @@ export function AdjustPlanScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: t.color.bg.base, paddingTop: insets.top }}>
-      {/* Header */}
+      {/* Header — bigger title, snug to the top edge */}
       <View
         style={{
           flexDirection: 'row',
           alignItems: 'center',
           paddingHorizontal: t.space[4],
-          paddingTop: t.space[2],
-          paddingBottom: t.space[2],
+          paddingTop: 0,
+          paddingBottom: t.space[3],
           minHeight: t.layout.minTapTarget,
         }}
       >
@@ -168,14 +168,14 @@ export function AdjustPlanScreen() {
           maxFontSizeMultiplier={t.a11y.maxFontScale}
           accessibilityRole="header"
           style={[
-            t.type.headline,
+            t.type.title2,
             { color: t.color.text.primary, flex: 1, textAlign: 'center' },
           ]}
         >
           Adjust plan
         </Text>
         <HeaderIconButton onPress={nav.goBack} accessibilityLabel="Close">
-          <X size={22} color={t.color.text.primary} strokeWidth={1.75} />
+          <X size={24} color={t.color.text.primary} strokeWidth={1.75} />
         </HeaderIconButton>
       </View>
 

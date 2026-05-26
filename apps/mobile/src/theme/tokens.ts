@@ -9,7 +9,7 @@
  * complete stub authored alongside light so dark mode is a swap, not a rewrite.
  */
 
-import { Platform, type TextStyle, type ViewStyle } from 'react-native';
+import type { TextStyle, ViewStyle } from 'react-native';
 
 // ─── Color primitives ─────────────────────────────────────────────────────────
 // Raw values, never used directly by components. Mapped to semantic names below.
@@ -47,6 +47,27 @@ const status = {
   /** Warning (e.g., "no income added yet"). Warm amber, used sparingly. */
   warning: '#C9913B',
   /** Success is implicit in the category palette; we don't need a separate green. */
+} as const;
+
+// ─── Brand ────────────────────────────────────────────────────────────────────
+// The indigo from the Budget Planner wordmark — used for primary actions, FAB,
+// active tab state, and section links. Distinct from category accents (which
+// stay functional / muted) and ink (which stays for surfaces and body text).
+
+const brand = {
+  /** Primary brand color. Filled buttons, FAB, active tab icon/label. */
+  base: '#5046E6',
+  /** Light-tinted variant for selected-chip pills, hover-feel backgrounds. */
+  tint: '#EEEDFD',
+  /** Darker variant for pressed state on filled brand surfaces. */
+  pressed: '#3D34C2',
+} as const;
+
+const brandDark = {
+  /** Slightly lighter in dark mode so it reads against #121214. */
+  base: '#7D6FFF',
+  tint: '#26224A',
+  pressed: '#9F94FF',
 } as const;
 
 // ─── Color: semantic (LIGHT) ──────────────────────────────────────────────────
@@ -91,21 +112,24 @@ const colorLight = {
   // Status
   status,
 
+  // Brand (indigo) — primary actions, FAB, active tab, section links
+  brand,
+
   // Tab bar
   tabBar: {
     bg: ink[0],
     border: 'rgba(60, 60, 67, 0.12)',
-    iconActive: ink[900],
+    iconActive: brand.base,
     iconInactive: ink[300],
-    labelActive: ink[900],
+    labelActive: brand.base,
     labelInactive: ink[500],
   },
 
-  // FAB — monochrome ink-on-paper per the brief
+  // FAB — indigo brand on white surface
   fab: {
-    bg: ink[900],
+    bg: brand.base,
     icon: ink[0],
-    pressed: ink[700],
+    pressed: brand.pressed,
   },
 } as const;
 
@@ -158,18 +182,19 @@ const colorDark = {
     overBudgetPressed: '#B86060',
     warning: '#E4B26A',
   },
+  brand: brandDark,
   tabBar: {
     bg: inkDark[50],
     border: 'rgba(235, 235, 245, 0.12)',
-    iconActive: inkDark[900],
+    iconActive: brandDark.base,
     iconInactive: inkDark[300],
-    labelActive: inkDark[900],
+    labelActive: brandDark.base,
     labelInactive: inkDark[500],
   },
   fab: {
-    bg: inkDark[900],
-    icon: inkDark[25],
-    pressed: inkDark[700],
+    bg: brandDark.base,
+    icon: ink[0],
+    pressed: brandDark.pressed,
   },
 } as const;
 
@@ -198,14 +223,29 @@ const space = {
 } as const;
 
 // ─── Typography ───────────────────────────────────────────────────────────────
-// System font on both platforms: SF Pro (iOS) / Roboto (Android).
-// Defined as TextStyle presets so consumers spread them: <Text style={type.title1} />
+// Poppins (Google Fonts) on both platforms — gives us the Coinbase-flavored
+// geometric sans while keeping a clean, free-to-ship license.
+//
+// Note on the per-weight family names: with @expo-google-fonts/poppins, each
+// weight is shipped as a separately-named font family (`Poppins_400Regular`,
+// `Poppins_600SemiBold`, etc.). RN's `fontWeight` style doesn't reliably pick
+// between weights when they share a family name across platforms, so every
+// type token specifies its own family explicitly. `fontWeight` stays in the
+// tokens for semantic clarity but the family is what actually renders.
+//
+// Etna (single weight, deliberate-brand-moment use) lives in `assets/fonts/`
+// for future use in marketing surfaces / wordmark overlays — not wired into
+// the type system here on purpose.
 
 const fontFamily = {
-  /** Default UI text. System font. */
-  ui: Platform.select({ ios: 'System', android: 'Roboto', default: 'System' })!,
-  /** Monetary values — same family but with tabular-nums variant for vertical alignment. */
-  numeric: Platform.select({ ios: 'System', android: 'Roboto', default: 'System' })!,
+  /** 400 weight — body, captions. */
+  regular: 'Poppins_400Regular',
+  /** 500 weight — labels, footnotes that need slight emphasis. */
+  medium: 'Poppins_500Medium',
+  /** 600 weight — headlines, titles, hero. The Coinbase-bold weight. */
+  semibold: 'Poppins_600SemiBold',
+  /** 700 weight — reserved for rare special-case emphasis. */
+  bold: 'Poppins_700Bold',
 } as const;
 
 const fontWeight = {
@@ -228,97 +268,100 @@ const letterSpacing = {
  *
  * Naming follows Apple HIG semantics — `body` is the canonical reading size.
  */
+// Poppins has noticeably taller vertical metrics than SF Pro / Roboto. The
+// line-heights below are bumped roughly 12–20% relative to a system-font
+// version of this scale to avoid clipping on descenders (g, p, y, j).
 const type = {
   hero: {
-    fontFamily: fontFamily.numeric,
+    fontFamily: fontFamily.semibold,
     fontSize: 56,
-    lineHeight: 64,
+    lineHeight: 72, // was 64 — needs extra room for the larger Poppins x-height
     fontWeight: fontWeight.semibold,
     letterSpacing: letterSpacing.tight,
     fontVariant: ['tabular-nums'] as TextStyle['fontVariant'],
   },
   display: {
-    fontFamily: fontFamily.ui,
+    fontFamily: fontFamily.semibold,
     fontSize: 40,
-    lineHeight: 46,
+    lineHeight: 52, // was 46
     fontWeight: fontWeight.semibold,
     letterSpacing: letterSpacing.tight,
   },
   title1: {
-    fontFamily: fontFamily.ui,
+    fontFamily: fontFamily.semibold,
     fontSize: 28,
-    lineHeight: 34,
+    lineHeight: 38, // was 34
     fontWeight: fontWeight.semibold,
     letterSpacing: letterSpacing.snug,
   },
   title2: {
-    fontFamily: fontFamily.ui,
+    fontFamily: fontFamily.semibold,
     fontSize: 22,
-    lineHeight: 28,
+    lineHeight: 30, // was 28
     fontWeight: fontWeight.semibold,
     letterSpacing: letterSpacing.snug,
   },
   title3: {
-    fontFamily: fontFamily.ui,
+    fontFamily: fontFamily.semibold,
     fontSize: 20,
-    lineHeight: 25,
+    lineHeight: 28, // was 25
     fontWeight: fontWeight.semibold,
     letterSpacing: letterSpacing.normal,
   },
   headline: {
-    fontFamily: fontFamily.ui,
+    fontFamily: fontFamily.semibold,
     fontSize: 17,
-    lineHeight: 22,
+    lineHeight: 24, // was 22
     fontWeight: fontWeight.semibold,
     letterSpacing: letterSpacing.normal,
   },
   body: {
-    fontFamily: fontFamily.ui,
+    fontFamily: fontFamily.regular,
     fontSize: 17,
-    lineHeight: 22,
+    lineHeight: 26, // was 22
     fontWeight: fontWeight.regular,
     letterSpacing: letterSpacing.normal,
   },
   callout: {
-    fontFamily: fontFamily.ui,
+    fontFamily: fontFamily.regular,
     fontSize: 16,
-    lineHeight: 21,
+    lineHeight: 24, // was 21
     fontWeight: fontWeight.regular,
     letterSpacing: letterSpacing.normal,
   },
   subhead: {
-    fontFamily: fontFamily.ui,
+    fontFamily: fontFamily.regular,
     fontSize: 15,
-    lineHeight: 20,
+    lineHeight: 22, // was 20
     fontWeight: fontWeight.regular,
     letterSpacing: letterSpacing.normal,
   },
   footnote: {
-    fontFamily: fontFamily.ui,
+    fontFamily: fontFamily.regular,
     fontSize: 13,
-    lineHeight: 18,
+    lineHeight: 20, // was 18
     fontWeight: fontWeight.regular,
     letterSpacing: letterSpacing.normal,
   },
   caption1: {
-    fontFamily: fontFamily.ui,
+    fontFamily: fontFamily.regular,
     fontSize: 12,
-    lineHeight: 16,
+    lineHeight: 18, // was 16
     fontWeight: fontWeight.regular,
     letterSpacing: letterSpacing.wide,
   },
   caption2: {
-    fontFamily: fontFamily.ui,
+    fontFamily: fontFamily.medium,
     fontSize: 11,
-    lineHeight: 14,
+    lineHeight: 16, // was 14
     fontWeight: fontWeight.medium,
     letterSpacing: letterSpacing.wide,
   },
   /** Numeric variant: monetary values that must align vertically in lists. */
   amount: {
-    fontFamily: fontFamily.numeric,
+    fontFamily: fontFamily.semibold,
     fontSize: 17,
-    lineHeight: 22,
+    lineHeight: 24, // was 22 — matches headline
     fontWeight: fontWeight.semibold,
     letterSpacing: letterSpacing.normal,
     fontVariant: ['tabular-nums'] as TextStyle['fontVariant'],

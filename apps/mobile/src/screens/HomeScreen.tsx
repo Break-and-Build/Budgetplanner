@@ -334,8 +334,8 @@ export function HomeScreen() {
               style={[
                 t.type.footnote,
                 {
-                  color: t.color.text.secondary,
-                  fontWeight: t.fontWeight.medium,
+                  color: t.color.brand.base,
+                  fontWeight: t.fontWeight.semibold,
                 },
               ]}
             >
@@ -383,8 +383,8 @@ export function HomeScreen() {
                   style={[
                     t.type.footnote,
                     {
-                      color: t.color.text.secondary,
-                      fontWeight: t.fontWeight.medium,
+                      color: t.color.brand.base,
+                      fontWeight: t.fontWeight.semibold,
                     },
                   ]}
                 >

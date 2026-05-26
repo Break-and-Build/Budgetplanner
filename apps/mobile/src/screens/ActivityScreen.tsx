@@ -33,7 +33,7 @@ import type { CategoryId, Transaction } from '@budgetplanner/core';
 
 import { useTokens } from '../theme/ThemeProvider';
 import { TabShell } from '../components/TabShell';
-import { ScreenHeader, HeaderIconButton } from '../components/ScreenHeader';
+import { HeaderIconButton } from '../components/ScreenHeader';
 import { CategoryDot } from '../components/CategoryDot';
 import { DayHeader } from '../components/DayHeader';
 import { TransactionRow } from '../components/TransactionRow';
@@ -129,7 +129,28 @@ export function ActivityScreen() {
   // ─── Render ───────────────────────────────────────────────────────────────
   return (
     <TabShell fab={fab}>
-      <ScreenHeader title="Activity" right={headerRight} />
+      {/* Inline header — title on the left, search icon on the right, same row.
+          (Was using ScreenHeader which stacks the action above the title.) */}
+      <View
+        style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          paddingHorizontal: t.space[4],
+          paddingTop: t.space[2],
+          paddingBottom: t.space[4],
+        }}
+      >
+        <Text
+          allowFontScaling
+          maxFontSizeMultiplier={t.a11y.maxFontScale}
+          accessibilityRole="header"
+          style={[t.type.title1, { color: t.color.text.primary }]}
+        >
+          Activity
+        </Text>
+        {headerRight}
+      </View>
 
       {/* Inline search field — appears below header when search is open */}
       {searchOpen ? (
@@ -239,8 +260,10 @@ function FilterChipRow({
                 paddingVertical: t.space[2],
                 borderRadius: t.radii.pill,
                 minHeight: 32,
+                // Selected → light-indigo tinted pill (Coinbase-style segmented).
+                // Unselected → hairline outlined, transparent.
                 backgroundColor: selected
-                  ? t.color.text.primary
+                  ? t.color.brand.tint
                   : pressed
                     ? t.color.bg.sunken
                     : 'transparent',
@@ -262,7 +285,7 @@ function FilterChipRow({
               style={[
                 t.type.footnote,
                 {
-                  color: selected ? t.color.text.inverse : t.color.text.primary,
+                  color: selected ? t.color.brand.base : t.color.text.primary,
                   fontWeight: selected ? t.fontWeight.semibold : t.fontWeight.medium,
                 },
               ]}
@@ -353,7 +376,7 @@ function EmptyState({
             paddingHorizontal: t.space[5],
             paddingVertical: t.space[3],
             borderRadius: t.radii.pill,
-            backgroundColor: pressed ? t.color.fab.pressed : t.color.text.primary,
+            backgroundColor: pressed ? t.color.brand.pressed : t.color.brand.base,
           })}
         >
           <Text
