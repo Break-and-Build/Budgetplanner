@@ -58,6 +58,8 @@ import { CurrencyPickerScreen } from './src/screens/CurrencyPickerScreen';
 import { MonthClose } from './src/screens/MonthClose';
 import { SettingsScreen } from './src/screens/SettingsScreen';
 import { AdjustPlanScreen } from './src/screens/AdjustPlanScreen';
+import { RecurringListScreen } from './src/screens/RecurringListScreen';
+import { RecurringDetailScreen } from './src/screens/RecurringDetailScreen';
 import { FastLogSheet } from './src/screens/FastLogSheet';
 import { UndoSnackbar } from './src/components/UndoSnackbar';
 
@@ -206,6 +208,8 @@ function Root({ fontsLoaded }: { fontsLoaded: boolean }) {
             headerShown: false,
           }}
         />
+        <RootStack.Screen name="RecurringList" component={RecurringListScreen} />
+        <RootStack.Screen name="RecurringDetail" component={RecurringDetailScreen} />
       </RootStack.Navigator>
     </NavigationContainer>
   );

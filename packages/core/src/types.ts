@@ -103,6 +103,37 @@ export interface MonthState {
 }
 
 /**
+ * A recurring transaction rule — a subscription, gym fee, etc. that auto-
+ * generates a `Transaction` on the configured day of each month.
+ *
+ * Distinct from `PriorityExpense` (which is a pre-budget deduction with no
+ * category and never becomes a transaction). Recurring rules ARE budget
+ * spend and DO have a category.
+ */
+export interface RecurringTransaction {
+  id: string;
+  name: string;
+  amount: number;
+  categoryId: CategoryId;
+  note?: string;
+  /**
+   * Calendar day-of-month the transaction fires on. 1–31. If the month has
+   * fewer days, falls back to the last day (e.g., 31 → Feb 28).
+   */
+  dayOfMonth: number;
+  /**
+   * YYYY-MM of the last month we generated a transaction for this rule.
+   * Prevents double-firing if the app is opened multiple times in the same
+   * month after the trigger day.
+   */
+  lastGeneratedMonth?: string;
+  /** False to pause without deleting. */
+  active: boolean;
+  /** ISO timestamp the rule was created. */
+  createdAt: string;
+}
+
+/**
  * The persisted shape. One blob per device. `current` is the active month;
  * `history` is closed months in reverse-chronological order.
  */
@@ -111,10 +142,17 @@ export interface BudgetBlob {
   currency: string;
   current: MonthState;
   history: MonthState[];
+  /** Recurring subscription rules. Auto-generates transactions on their day. */
+  recurring: RecurringTransaction[];
   /** Where the setup wizard left off, if it's mid-flow. 1-indexed, 1..6. */
   setupStep?: number;
   /** True once the user has completed setup at least once. Drives FirstRun gate. */
   setupComplete: boolean;
+  /**
+   * Opt-in flag for the two local reminders (daily 9am + 28th-of-month). Off
+   * by default — respects the brief's "no preachy notifications" rule.
+   */
+  remindersEnabled?: boolean;
 }
 
 // ─── Legacy v1 shape (for migration only) ────────────────────────────────────

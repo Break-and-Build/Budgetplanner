@@ -16,6 +16,7 @@ export type {
   MonthState,
   BudgetBlob,
   BudgetBlobV1,
+  RecurringTransaction,
 } from './types';
 
 // Calculations
@@ -46,3 +47,6 @@ export {
   shouldShowMonthCloseBanner,
   rollForward,
 } from './storage';
+
+// Recurring transaction rules
+export { shouldFireRule, materializeRule, runRecurringRules } from './recurring';

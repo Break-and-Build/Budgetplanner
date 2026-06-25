@@ -40,3 +40,6 @@ web-build/
 .env
 .env.local
 .env.*.local
+
+# Local screenshot exports — design artifacts live in .design/.../screenshots/
+Screenshots/

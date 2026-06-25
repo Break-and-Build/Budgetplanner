@@ -53,6 +53,7 @@ export function emptyBudgetBlob(currency: string, now: Date = new Date()): Budge
       transactions: [],
     },
     history: [],
+    recurring: [],
     setupStep: 1,
     setupComplete: false,
   };
@@ -108,6 +109,7 @@ export function migrateV1ToV2(v1: BudgetBlobV1 | null | undefined, now: Date = n
     currency: v1.currency || '₦',
     current,
     history: [],
+    recurring: [],
     setupStep: setupComplete ? undefined : Math.min(6, Math.max(1, v1.currentStep ?? 1)),
     setupComplete,
   };
@@ -130,8 +132,13 @@ export function parseBudgetBlob(raw: unknown, now: Date = new Date()): BudgetBlo
       currency: v2.currency || '₦',
       current: hydrateMonth(v2.current, now),
       history: Array.isArray(v2.history) ? v2.history.map((m) => hydrateMonth(m, now)) : [],
+      // Recurring was added after schemaVersion 2 shipped — older v2 blobs
+      // won't have it; default to empty array for forward-compat.
+      recurring: Array.isArray(v2.recurring) ? v2.recurring : [],
       setupStep: typeof v2.setupStep === 'number' ? v2.setupStep : undefined,
       setupComplete: !!v2.setupComplete,
+      // Same forward-compat dance for remindersEnabled.
+      remindersEnabled: typeof v2.remindersEnabled === 'boolean' ? v2.remindersEnabled : false,
     };
   }
 

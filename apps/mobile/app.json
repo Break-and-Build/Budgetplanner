@@ -7,6 +7,11 @@
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "scheme": "budgetplanner",
+    "platforms": [
+      "ios",
+      "android",
+      "web"
+    ],
     "assetBundlePatterns": [
       "**/*"
     ],
@@ -34,7 +39,20 @@
           "resizeMode": "contain"
         }
       ],
-      "expo-font"
-    ]
+      "expo-font",
+      "@react-native-community/datetimepicker",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/icon.png",
+          "color": "#5046E6"
+        }
+      ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "0cd14482-2c84-437c-83ec-fa8c9fba2442"
+      }
+    }
   }
 }

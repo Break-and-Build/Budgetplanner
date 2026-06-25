@@ -29,6 +29,7 @@ import { useTokens } from '../theme/ThemeProvider';
 import { HeaderIconButton } from '../components/ScreenHeader';
 import { BottomSheet } from '../components/BottomSheet';
 import { Button } from '../components/ui/Button';
+import { Switch } from '../components/ui/Switch';
 import { useBudget } from '../state/BudgetContext';
 import type { RootStackParamList } from '../types/navigation';
 
@@ -41,10 +42,24 @@ export function SettingsScreen() {
   const t = useTokens();
   const nav = useNavigation<Nav>();
   const insets = useSafeAreaInsets();
-  const { blob, resetAll, resetCurrentMonth } = useBudget();
+  const {
+    blob,
+    resetAll,
+    resetCurrentMonth,
+    remindersEnabled,
+    setRemindersEnabled,
+  } = useBudget();
   const [confirmAction, setConfirmAction] = useState<null | 'all' | 'month'>(null);
+  const [permissionDenied, setPermissionDenied] = useState(false);
 
   const currentCurrency = getCurrency(blob.currency);
+
+  const onToggleReminders = async (next: boolean) => {
+    const granted = await setRemindersEnabled(next);
+    // If the user wanted them on but the OS denied permission, surface the
+    // "enable in iOS Settings" hint inline.
+    setPermissionDenied(next && !granted);
+  };
 
   const onResetAll = async () => {
     await resetAll();
@@ -104,6 +119,74 @@ export function SettingsScreen() {
             onPress={() => nav.navigate('FirstRun', { mode: 'edit' })}
           />
         </Card>
+
+        {/* ─── Automation ───────────────────────────────────────────────── */}
+        <SectionLabel>Automation</SectionLabel>
+        <Card>
+          <Row
+            label="Recurring"
+            sublabel="Subscriptions and monthly auto-logs."
+            onPress={() => nav.navigate('RecurringList')}
+          />
+        </Card>
+
+        {/* ─── Reminders ────────────────────────────────────────────────── */}
+        <SectionLabel>Reminders</SectionLabel>
+        <Card>
+          <View
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              paddingHorizontal: t.space[4],
+              paddingVertical: t.space[3],
+              minHeight: 56,
+            }}
+            accessibilityLabel="Daily and month-end reminders toggle"
+          >
+            <View style={{ flex: 1, paddingRight: t.space[3] }}>
+              <Text
+                allowFontScaling
+                maxFontSizeMultiplier={t.a11y.maxFontScale}
+                style={[t.type.body, { color: t.color.text.primary }]}
+              >
+                Daily and month-end
+              </Text>
+              <Text
+                allowFontScaling
+                maxFontSizeMultiplier={t.a11y.maxFontScale}
+                style={[
+                  t.type.footnote,
+                  { color: t.color.text.secondary, marginTop: 2 },
+                ]}
+              >
+                A calm nudge at 9am, plus a reminder on the 28th to close out
+                the month.
+              </Text>
+            </View>
+            <Switch
+              value={remindersEnabled}
+              onValueChange={onToggleReminders}
+              accessibilityLabel="Toggle reminders"
+            />
+          </View>
+        </Card>
+        {permissionDenied ? (
+          <Text
+            allowFontScaling
+            maxFontSizeMultiplier={t.a11y.maxFontScale}
+            style={[
+              t.type.caption1,
+              {
+                color: t.color.status.overBudget,
+                paddingHorizontal: t.space[5],
+                paddingTop: t.space[2],
+              },
+            ]}
+          >
+            Notifications are blocked. Enable Budget Planner in your device
+            Settings to turn reminders on.
+          </Text>
+        ) : null}
 
         {/* ─── Reset ────────────────────────────────────────────────────── */}
         <SectionLabel>Reset</SectionLabel>

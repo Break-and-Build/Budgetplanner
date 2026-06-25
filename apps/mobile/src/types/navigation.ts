@@ -33,6 +33,11 @@ export type RootStackParamList = {
   TransactionDetail: { id: string };
   AdjustPlan: { focus?: 'income' | 'priorities' | 'savings' | 'buckets' } | undefined;
   Settings: undefined;
+
+  /** List of recurring transaction rules (subscriptions). */
+  RecurringList: undefined;
+  /** Add or edit a single recurring rule. Pass `id: 'new'` to create. */
+  RecurringDetail: { id: string };
 };
 
 declare global {

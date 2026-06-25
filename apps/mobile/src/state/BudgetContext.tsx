@@ -18,6 +18,11 @@
  */
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import {
+  cancelAllReminders,
+  requestNotificationPermission,
+  scheduleAllReminders,
+} from '../lib/notifications';
 import React, {
   createContext,
   useCallback,
@@ -32,6 +37,7 @@ import type {
   BudgetBlobV1,
   BudgetPlan,
   MonthState,
+  RecurringTransaction,
   ReflectionData,
   Transaction,
 } from '@budgetplanner/core';
@@ -40,6 +46,7 @@ import {
   migrateV1ToV2,
   parseBudgetBlob,
   rollForward,
+  runRecurringRules,
   symbolFor,
 } from '@budgetplanner/core';
 
@@ -68,6 +75,21 @@ interface BudgetContextValue {
   // ─── Plan / currency ──────────────────────────────────────────────────────
   setPlan: (plan: BudgetPlan) => void;
   setCurrency: (code: string) => void;
+
+  // ─── Recurring transaction rules ──────────────────────────────────────────
+  recurring: RecurringTransaction[];
+  addRecurring: (rule: Omit<RecurringTransaction, 'id' | 'createdAt'>) => void;
+  updateRecurring: (id: string, patch: Partial<RecurringTransaction>) => void;
+  removeRecurring: (id: string) => void;
+
+  // ─── Reminders (local notifications) ──────────────────────────────────────
+  remindersEnabled: boolean;
+  /**
+   * Turn reminders on or off. Enabling requests OS permission first; if the
+   * user denies, the toggle stays off. Returns the resulting state so the
+   * UI can bounce-back if permission was denied.
+   */
+  setRemindersEnabled: (next: boolean) => Promise<boolean>;
 
   // ─── Month close ──────────────────────────────────────────────────────────
   /**
@@ -155,7 +177,14 @@ export function BudgetProvider({ children }: { children: React.ReactNode }) {
         if (rawV2) {
           const parsed = JSON.parse(rawV2);
           const hydrated = parseBudgetBlob(parsed);
-          if (!cancelled) setBlob(hydrated);
+          // Fire any recurring rules whose day has passed this month and
+          // haven't already fired. Pure: same input + date → same output.
+          const withRecurring = runRecurringRules(
+            hydrated,
+            new Date(),
+            () => `tx-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+          );
+          if (!cancelled) setBlob(withRecurring);
         } else {
           // No v2 — check for a legacy v1 blob and migrate if present.
           const rawV1 = await AsyncStorage.getItem(STORAGE_KEY_V1);
@@ -256,6 +285,70 @@ export function BudgetProvider({ children }: { children: React.ReactNode }) {
     setBlob((prev) => ({ ...prev, currency: code }));
   }, []);
 
+  // ─── Recurring rules ──────────────────────────────────────────────────────
+  const addRecurring = useCallback(
+    (rule: Omit<RecurringTransaction, 'id' | 'createdAt'>) => {
+      // If the user creates a rule for a day already past in the current
+      // month, mark it as already-fired-this-month so it doesn't backfire
+      // immediately. Rule activates from the next cycle onward.
+      const now = new Date();
+      const todayDay = now.getUTCDate();
+      const currentMonthKey = `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, '0')}`;
+      const alreadyPast = todayDay >= rule.dayOfMonth;
+      const full: RecurringTransaction = {
+        ...rule,
+        lastGeneratedMonth: alreadyPast ? currentMonthKey : rule.lastGeneratedMonth,
+        id: `rec-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        createdAt: now.toISOString(),
+      };
+      setBlob((prev) => ({ ...prev, recurring: [...prev.recurring, full] }));
+    },
+    [],
+  );
+
+  const updateRecurring = useCallback(
+    (id: string, patch: Partial<RecurringTransaction>) => {
+      setBlob((prev) => ({
+        ...prev,
+        recurring: prev.recurring.map((r) => (r.id === id ? { ...r, ...patch } : r)),
+      }));
+    },
+    [],
+  );
+
+  const removeRecurring = useCallback((id: string) => {
+    setBlob((prev) => ({
+      ...prev,
+      recurring: prev.recurring.filter((r) => r.id !== id),
+    }));
+  }, []);
+
+  // ─── Reminders ────────────────────────────────────────────────────────────
+  const setRemindersEnabled = useCallback(async (next: boolean): Promise<boolean> => {
+    if (next) {
+      // Ask the OS for permission first. If denied, the toggle stays off and
+      // we don't schedule anything. The UI bounces the switch back.
+      const granted = await requestNotificationPermission();
+      if (!granted) {
+        setBlob((prev) => ({ ...prev, remindersEnabled: false }));
+        return false;
+      }
+      await scheduleAllReminders().catch(() => {});
+      setBlob((prev) => ({ ...prev, remindersEnabled: true }));
+      return true;
+    }
+    await cancelAllReminders().catch(() => {});
+    setBlob((prev) => ({ ...prev, remindersEnabled: false }));
+    return false;
+  }, []);
+
+  // Re-schedule on every app launch when reminders are enabled — the OS can
+  // drop scheduled notifications after device reboots or app updates.
+  useEffect(() => {
+    if (!isHydrated || !blob.remindersEnabled) return;
+    scheduleAllReminders().catch(() => {});
+  }, [isHydrated, blob.remindersEnabled]);
+
   // ─── Month close ──────────────────────────────────────────────────────────
   const [monthCloseBannerDismissed, setBannerDismissed] = useState(false);
   const dismissMonthCloseBanner = useCallback(() => setBannerDismissed(true), []);
@@ -303,6 +396,12 @@ export function BudgetProvider({ children }: { children: React.ReactNode }) {
       findTransaction,
       setPlan,
       setCurrency,
+      recurring: blob.recurring,
+      addRecurring,
+      updateRecurring,
+      removeRecurring,
+      remindersEnabled: !!blob.remindersEnabled,
+      setRemindersEnabled,
       closeMonth,
       monthCloseBannerDismissed,
       dismissMonthCloseBanner,
@@ -324,6 +423,10 @@ export function BudgetProvider({ children }: { children: React.ReactNode }) {
       findTransaction,
       setPlan,
       setCurrency,
+      addRecurring,
+      updateRecurring,
+      removeRecurring,
+      setRemindersEnabled,
       closeMonth,
       monthCloseBannerDismissed,
       dismissMonthCloseBanner,

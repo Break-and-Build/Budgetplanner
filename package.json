@@ -1,16 +1,20 @@
 {
-  "name": "@figma/my-make-file",
+  "name": "budgetplanner-workspace",
   "private": true,
   "version": "0.0.1",
   "type": "module",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
   "scripts": {
     "build": "vite build",
     "dev": "vite",
-    "mobile": "npm --prefix apps/mobile start",
+    "mobile": "npm --workspace @budgetplanner/mobile start",
     "mobile:clear": "cd apps/mobile && npx expo start --clear",
-    "mobile:install": "npm --prefix apps/mobile install",
-    "mobile:ios": "npm --prefix apps/mobile run ios",
-    "mobile:android": "npm --prefix apps/mobile run android"
+    "mobile:install": "npm install",
+    "mobile:ios": "npm --workspace @budgetplanner/mobile run ios",
+    "mobile:android": "npm --workspace @budgetplanner/mobile run android"
   },
   "dependencies": {
     "@emotion/react": "11.14.0",
@@ -73,8 +77,10 @@
   },
   "devDependencies": {
     "@tailwindcss/vite": "4.1.12",
+    "@types/react": "~19.2.10",
     "@vitejs/plugin-react": "4.7.0",
     "tailwindcss": "4.1.12",
+    "typescript": "~5.9.2",
     "vite": "^6.4.2"
   },
   "pnpm": {

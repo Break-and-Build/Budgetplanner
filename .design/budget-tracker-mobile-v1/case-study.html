@@ -1,0 +1,736 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Budget Planner — Case Study · Break and Build</title>
+  <meta name="description" content="A calm budget that lives on your phone. Design and build case study from Break and Build.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #FAFAF7;
+      --surface: #FFFFFF;
+      --sunken: #F1F0EC;
+      --ink: #15151A;
+      --ink-secondary: #6E6E73;
+      --ink-tertiary: #A1A1A6;
+      --hairline: rgba(60, 60, 67, 0.12);
+      --divider: rgba(60, 60, 67, 0.18);
+      --brand: #5046E6;
+      --brand-tint: #EEEDFD;
+      --brand-pressed: #3D34C2;
+      --essentials: #4A6FA5;
+      --growth: #5C8A6B;
+      --stability: #7A6B95;
+      --rewards: #B5755C;
+      --essentials-tint: #E3EBF4;
+      --growth-tint: #E4EEE7;
+      --stability-tint: #EBE8F0;
+      --rewards-tint: #F2E4DE;
+      --over: #B84A4A;
+      --max-w: 920px;
+      --gutter: clamp(20px, 4vw, 40px);
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      margin: 0; padding: 0;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: 'Poppins', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+      font-size: 17px;
+      line-height: 1.55;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      font-feature-settings: 'tnum' on, 'lnum' on;
+    }
+
+    .page { max-width: var(--max-w); margin: 0 auto; padding: 0 var(--gutter); }
+    .narrow { max-width: 720px; margin-left: auto; margin-right: auto; }
+
+    /* Hero */
+    .hero {
+      padding: clamp(48px, 9vw, 96px) var(--gutter) clamp(40px, 7vw, 72px);
+      text-align: center;
+    }
+    .hero .brand-row {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 14px 8px 10px;
+      border: 1px solid var(--divider);
+      border-radius: 999px;
+      color: var(--ink-secondary);
+      font-size: 13px;
+      font-weight: 500;
+      letter-spacing: 0.4px;
+      text-transform: uppercase;
+      margin-bottom: 28px;
+    }
+    .hero .brand-row .dot {
+      width: 10px; height: 10px; border-radius: 999px;
+      background: var(--brand);
+    }
+    .hero h1 {
+      font-size: clamp(40px, 8vw, 84px);
+      line-height: 1.05;
+      letter-spacing: -0.02em;
+      font-weight: 700;
+      margin: 0 0 16px;
+    }
+    .hero .lead {
+      max-width: 540px;
+      margin: 0 auto;
+      color: var(--ink-secondary);
+      font-size: clamp(17px, 2.3vw, 21px);
+    }
+    .hero .meta {
+      margin-top: 28px;
+      color: var(--ink-tertiary);
+      font-size: 13px;
+      letter-spacing: 0.3px;
+    }
+    .hero .phone-wrap {
+      margin: 56px auto 0;
+      width: clamp(220px, 32vw, 320px);
+      filter: drop-shadow(0 24px 48px rgba(21, 21, 26, 0.18))
+              drop-shadow(0 6px 14px rgba(21, 21, 26, 0.08));
+    }
+    .hero .phone-wrap img {
+      width: 100%; height: auto;
+      border-radius: 36px;
+      display: block;
+    }
+
+    /* TL;DR card grid */
+    .tldr {
+      background: var(--surface);
+      border: 1px solid var(--hairline);
+      border-radius: 22px;
+      padding: clamp(20px, 3vw, 32px);
+      margin: clamp(40px, 7vw, 72px) 0;
+      box-shadow: 0 4px 12px rgba(21, 21, 26, 0.04);
+    }
+    .tldr h2 {
+      margin: 0 0 20px;
+      font-size: 12px;
+      letter-spacing: 0.8px;
+      text-transform: uppercase;
+      color: var(--ink-secondary);
+      font-weight: 600;
+    }
+    .tldr-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 18px 28px;
+    }
+    .tldr-item {
+      display: flex;
+      gap: 14px;
+      align-items: flex-start;
+    }
+    .tldr-icon {
+      width: 32px; height: 32px;
+      border-radius: 10px;
+      background: var(--brand-tint);
+      color: var(--brand);
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+      font-size: 17px;
+    }
+    .tldr-item .label {
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+      color: var(--ink-secondary);
+      font-weight: 600;
+      margin-bottom: 2px;
+    }
+    .tldr-item .value {
+      font-size: 15px;
+      color: var(--ink);
+      line-height: 1.4;
+    }
+
+    /* Section headings */
+    section { padding: clamp(48px, 8vw, 80px) 0; }
+    section h2.section-title {
+      font-size: clamp(28px, 4vw, 40px);
+      line-height: 1.15;
+      letter-spacing: -0.01em;
+      font-weight: 700;
+      margin: 0 0 16px;
+    }
+    section h2.section-title .ord {
+      display: inline-block;
+      font-size: 0.55em;
+      color: var(--brand);
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      margin-right: 12px;
+      vertical-align: middle;
+    }
+    section .section-intro {
+      color: var(--ink-secondary);
+      font-size: 17px;
+      max-width: 600px;
+    }
+
+    /* Problem pull quote */
+    .pull-quote {
+      font-family: 'Poppins', serif;
+      font-style: italic;
+      font-weight: 500;
+      font-size: clamp(22px, 3.2vw, 30px);
+      line-height: 1.4;
+      color: var(--ink);
+      padding: clamp(28px, 5vw, 48px) 0 clamp(28px, 5vw, 48px) clamp(24px, 4vw, 40px);
+      border-left: 3px solid var(--brand);
+      margin: 32px 0;
+    }
+    .pull-quote::before { content: '"'; color: var(--brand); }
+    .pull-quote::after { content: '"'; color: var(--brand); }
+
+    /* Camps comparison */
+    .camps {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      margin-top: 32px;
+    }
+    @media (max-width: 720px) { .camps { grid-template-columns: 1fr; } }
+    .camp {
+      background: var(--surface);
+      border: 1px solid var(--hairline);
+      border-radius: 18px;
+      padding: 24px;
+    }
+    .camp h3 {
+      margin: 0 0 6px;
+      font-size: 18px;
+      font-weight: 600;
+    }
+    .camp .examples {
+      font-size: 13px;
+      color: var(--ink-secondary);
+      margin-bottom: 14px;
+      letter-spacing: 0.2px;
+    }
+    .camp .verdict {
+      font-size: 15px;
+      color: var(--ink);
+      margin: 0;
+    }
+
+    /* Process flow */
+    .process-flow {
+      margin: 32px 0;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 14px;
+    }
+    .process-step {
+      background: var(--surface);
+      border: 1px solid var(--hairline);
+      border-radius: 14px;
+      padding: 18px;
+      position: relative;
+    }
+    .process-step .step-n {
+      font-size: 11px;
+      color: var(--brand);
+      letter-spacing: 0.8px;
+      text-transform: uppercase;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+    .process-step h4 {
+      margin: 0 0 4px;
+      font-size: 16px;
+      font-weight: 600;
+    }
+    .process-step p {
+      margin: 0;
+      font-size: 13px;
+      color: var(--ink-secondary);
+      line-height: 1.45;
+    }
+
+    /* Decision cards */
+    .decision {
+      display: grid;
+      grid-template-columns: 1fr 240px;
+      gap: 40px;
+      align-items: center;
+      padding: clamp(28px, 4vw, 40px) 0;
+      border-bottom: 1px solid var(--hairline);
+    }
+    .decision:nth-child(even) { grid-template-columns: 240px 1fr; }
+    .decision:nth-child(even) .decision-img { order: -1; }
+    .decision:last-child { border-bottom: none; }
+    @media (max-width: 720px) {
+      .decision, .decision:nth-child(even) { grid-template-columns: 1fr; gap: 24px; }
+      .decision:nth-child(even) .decision-img { order: 0; }
+    }
+    .decision .number {
+      display: inline-block;
+      font-size: 11px;
+      letter-spacing: 0.8px;
+      text-transform: uppercase;
+      color: var(--brand);
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+    .decision h3 {
+      font-size: clamp(22px, 3vw, 28px);
+      line-height: 1.2;
+      letter-spacing: -0.005em;
+      margin: 0 0 14px;
+      font-weight: 600;
+    }
+    .decision p { margin: 0 0 12px; color: var(--ink-secondary); }
+    .decision strong { color: var(--ink); font-weight: 600; }
+    .decision .quote-thin {
+      font-style: italic;
+      color: var(--ink-secondary);
+      border-left: 2px solid var(--divider);
+      padding-left: 14px;
+      margin: 14px 0;
+      font-size: 15px;
+    }
+    .decision-img {
+      width: 240px;
+      filter: drop-shadow(0 16px 32px rgba(21, 21, 26, 0.12))
+              drop-shadow(0 4px 8px rgba(21, 21, 26, 0.06));
+    }
+    .decision-img img {
+      width: 100%; height: auto;
+      border-radius: 28px;
+      display: block;
+    }
+
+    /* System grid */
+    .system-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 16px;
+      margin-top: 32px;
+    }
+    .system-tile {
+      background: var(--surface);
+      border: 1px solid var(--hairline);
+      border-radius: 16px;
+      padding: 24px;
+    }
+    .system-tile .emoji {
+      display: inline-flex;
+      width: 36px; height: 36px;
+      align-items: center; justify-content: center;
+      background: var(--sunken);
+      border-radius: 10px;
+      font-size: 18px;
+      margin-bottom: 12px;
+    }
+    .system-tile h4 {
+      margin: 0 0 6px;
+      font-size: 17px;
+      font-weight: 600;
+    }
+    .system-tile p {
+      margin: 0;
+      font-size: 15px;
+      color: var(--ink-secondary);
+      line-height: 1.5;
+    }
+
+    /* Palette */
+    .palette {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+      gap: 14px;
+      margin: 28px 0;
+    }
+    .swatch {
+      border: 1px solid var(--hairline);
+      border-radius: 14px;
+      overflow: hidden;
+      background: var(--surface);
+    }
+    .swatch .color {
+      height: 84px;
+    }
+    .swatch .meta {
+      padding: 12px 14px;
+    }
+    .swatch .name { font-weight: 600; font-size: 14px; }
+    .swatch .hex { font-size: 12px; color: var(--ink-tertiary); font-feature-settings: 'tnum'; }
+
+    /* Pivot table */
+    .pivot-table {
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 0;
+      margin-top: 24px;
+      background: var(--surface);
+      border: 1px solid var(--hairline);
+      border-radius: 18px;
+      overflow: hidden;
+    }
+    .pivot-table th, .pivot-table td {
+      padding: 14px 18px;
+      text-align: left;
+      border-bottom: 1px solid var(--hairline);
+    }
+    .pivot-table th {
+      font-size: 11px;
+      letter-spacing: 0.6px;
+      text-transform: uppercase;
+      color: var(--ink-secondary);
+      background: var(--sunken);
+      font-weight: 600;
+    }
+    .pivot-table tr:last-child td { border-bottom: none; }
+    .pivot-table td:first-child { font-weight: 500; }
+    .chip-ink {
+      display: inline-block;
+      background: var(--ink);
+      color: white;
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 500;
+    }
+    .chip-brand {
+      display: inline-block;
+      background: var(--brand);
+      color: white;
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 500;
+    }
+    .chip-brand-tint {
+      display: inline-block;
+      background: var(--brand-tint);
+      color: var(--brand);
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    /* Lessons */
+    .lessons { counter-reset: lesson; margin-top: 28px; }
+    .lesson {
+      counter-increment: lesson;
+      position: relative;
+      padding: 24px 24px 24px 76px;
+      background: var(--surface);
+      border: 1px solid var(--hairline);
+      border-radius: 16px;
+      margin-bottom: 14px;
+    }
+    .lesson::before {
+      content: counter(lesson);
+      position: absolute;
+      left: 24px;
+      top: 24px;
+      width: 36px; height: 36px;
+      background: var(--brand);
+      color: white;
+      display: flex; align-items: center; justify-content: center;
+      border-radius: 999px;
+      font-size: 15px;
+      font-weight: 700;
+      font-feature-settings: 'tnum';
+    }
+    .lesson h4 { margin: 0 0 6px; font-size: 17px; font-weight: 600; }
+    .lesson p { margin: 0; color: var(--ink-secondary); font-size: 15px; line-height: 1.55; }
+
+    /* Gallery */
+    .gallery {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 18px;
+      margin-top: 32px;
+    }
+    @media (max-width: 720px) { .gallery { grid-template-columns: repeat(2, 1fr); } }
+    .gallery figure {
+      margin: 0;
+      text-align: center;
+    }
+    .gallery img {
+      width: 100%; height: auto;
+      border-radius: 24px;
+      box-shadow: 0 8px 20px rgba(21, 21, 26, 0.08),
+                  0 2px 6px rgba(21, 21, 26, 0.04);
+    }
+    .gallery figcaption {
+      font-size: 12px;
+      color: var(--ink-tertiary);
+      margin-top: 8px;
+      letter-spacing: 0.2px;
+    }
+
+    /* Footer */
+    footer {
+      padding: 80px 0;
+      text-align: center;
+      border-top: 1px solid var(--hairline);
+      margin-top: 80px;
+    }
+    footer .logo { font-weight: 800; letter-spacing: -0.01em; font-size: 22px; }
+    footer .tag { color: var(--ink-tertiary); font-size: 14px; margin-top: 12px; }
+    footer .links { margin-top: 24px; display: flex; gap: 20px; justify-content: center; flex-wrap: wrap; }
+    footer a { color: var(--brand); text-decoration: none; font-weight: 500; font-size: 14px; }
+    footer a:hover { text-decoration: underline; }
+
+    /* Print */
+    @media print {
+      .hero .phone-wrap, .gallery img { box-shadow: none; filter: none; }
+      section { padding: 24px 0; }
+      .decision { page-break-inside: avoid; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="page">
+
+  <!-- HERO -->
+  <header class="hero">
+    <div class="brand-row">
+      <span class="dot"></span>
+      <span>Case Study · Break and Build</span>
+    </div>
+    <h1>Budget Planner</h1>
+    <p class="lead">A calm budget that lives on your phone. Designed and built v1 in ~4 weeks. Public launch May 2026.</p>
+    <p class="meta">Mobile-first personal finance · React Native (Expo) · TypeScript · Poppins · Indigo brand</p>
+
+    <div class="phone-wrap">
+      <img src="screenshots/IMG_6679.PNG" alt="Budget Planner home screen on iPhone, showing today's safe-to-spend amount and four category bars">
+    </div>
+  </header>
+
+  <!-- TL;DR -->
+  <div class="tldr">
+    <h2>At a glance</h2>
+    <div class="tldr-grid">
+      <div class="tldr-item"><div class="tldr-icon">🎯</div><div><div class="label">Problem</div><div class="value">Most people make a budget on the 1st and forget about it.</div></div></div>
+      <div class="tldr-item"><div class="tldr-icon">💡</div><div><div class="label">Solution</div><div class="value">A mobile-first tracker that turns a worksheet into a daily rhythm.</div></div></div>
+      <div class="tldr-item"><div class="tldr-icon">🎨</div><div><div class="label">Aesthetic</div><div class="value">"Apple-Wallet calm" with a brand pivot to indigo brand color.</div></div></div>
+      <div class="tldr-item"><div class="tldr-icon">🛠️</div><div><div class="label">Stack</div><div class="value">React Native (Expo SDK 54), TypeScript, AsyncStorage today, Supabase next.</div></div></div>
+      <div class="tldr-item"><div class="tldr-icon">📦</div><div><div class="label">Shipped in v1</div><div class="value">11 screens, 25 components, 5 design artifacts, 1 hardcoded color total.</div></div></div>
+      <div class="tldr-item"><div class="tldr-icon">🚀</div><div><div class="label">Status</div><div class="value">TestFlight beta in ~2 weeks. Public launch shortly after.</div></div></div>
+    </div>
+  </div>
+
+  <!-- THE PROBLEM -->
+  <section>
+    <h2 class="section-title"><span class="ord">01</span>The problem</h2>
+    <p class="section-intro narrow">From the user's own mouth, captured during the grill phase:</p>
+
+    <div class="narrow">
+      <p class="pull-quote">I make a budget at the start of the month and then forget about it. Two weeks in, I have no idea whether I'm on track. The plan and my real spending drift apart silently until the end of the month, when I either feel vague guilt or pretend it didn't happen.</p>
+    </div>
+
+    <p class="narrow" style="color: var(--ink-secondary);">Most budget apps fall into one of two camps:</p>
+
+    <div class="narrow camps">
+      <div class="camp">
+        <h3>Enthusiastic fintech</h3>
+        <div class="examples">Mint · Cleo · Copilot Money</div>
+        <p class="verdict">Bright colors, streaks, push spam. Reads like a friend with too much caffeine.</p>
+      </div>
+      <div class="camp">
+        <h3>Power-user dashboards</h3>
+        <div class="examples">YNAB · Lunch Money</div>
+        <p class="verdict">Beautifully dense. Punishing if you're not already a budget nerd.</p>
+      </div>
+    </div>
+
+    <p class="narrow" style="margin-top: 24px; font-size: 18px;">We wanted <strong>neither</strong>. A budget that lives in your pocket. Quiet, trustworthy, disciplined enough to do <em>less</em>.</p>
+  </section>
+
+  <!-- PROCESS -->
+  <section>
+    <h2 class="section-title"><span class="ord">02</span>Process</h2>
+    <p class="section-intro narrow">Instead of opening Figma and pushing pixels, we worked through a six-phase design flow. Each phase produces a deliverable that feeds the next.</p>
+
+    <div class="process-flow">
+      <div class="process-step"><div class="step-n">01</div><h4>Grill Me</h4><p>Pressure-test every decision branch.</p></div>
+      <div class="process-step"><div class="step-n">02</div><h4>Brief</h4><p>Problem, principles, aesthetic.</p></div>
+      <div class="process-step"><div class="step-n">03</div><h4>IA</h4><p>Site map, flows, naming.</p></div>
+      <div class="process-step"><div class="step-n">04</div><h4>Tokens</h4><p>Colors, type, spacing, motion.</p></div>
+      <div class="process-step"><div class="step-n">05</div><h4>Tasks</h4><p>Vertical-slice build order.</p></div>
+      <div class="process-step"><div class="step-n">06</div><h4>Review</h4><p>Audit against the brief.</p></div>
+    </div>
+
+    <p class="narrow" style="color: var(--ink-secondary); margin-top: 28px;">The rule: <strong style="color: var(--ink);">a phase can't start until the previous one has settled.</strong> No tokens until we know the aesthetic. No tasks until we know the IA. The flow makes it harder to skip the hard thinking — and easier for a future team to read why every screen looks the way it does.</p>
+  </section>
+
+  <!-- DECISIONS -->
+  <section>
+    <h2 class="section-title"><span class="ord">03</span>The four decisions that shaped the product</h2>
+
+    <article class="decision">
+      <div>
+        <span class="number">Decision 01</span>
+        <h3>Local-only. No account. No backend.</h3>
+        <p>Personal-finance apps die when users see a signup form before they've seen any value. The first 10 seconds had to be: open app → currency picker → setup → home screen. <strong>No account, no email, no password.</strong> The data lives on the device.</p>
+        <p class="quote-thin">Cloud sync ships as <em>optional</em> in v1.0 (planned via Supabase + anonymous auth). It is never required.</p>
+      </div>
+      <div class="decision-img"><img src="screenshots/IMG_6676.PNG" alt="Settings screen showing local-only data approach"></div>
+    </article>
+
+    <article class="decision">
+      <div>
+        <span class="number">Decision 02</span>
+        <h3>One screen, one answer.</h3>
+        <p>Most fintech home screens try to answer six questions at once. Ours answers <strong>one</strong>: today's safe-to-spend. The hero numeral is impossible to miss. Below it, four category bars answer <em>"what's left in each bucket?"</em> Below those, recent activity answers <em>"did the last thing I logged go in?"</em></p>
+        <p>That's it. No watchlist. No insights chart. No marketing card.</p>
+      </div>
+      <div class="decision-img"><img src="screenshots/IMG_6679.PNG" alt="Home screen showing the single safe-to-spend hero"></div>
+    </article>
+
+    <article class="decision">
+      <div>
+        <span class="number">Decision 03</span>
+        <h3>Manual logging, not bank sync.</h3>
+        <p>The hardest trade-off. Bank sync is what fintech users expect — auto-import, no manual entry. But it carries hidden costs: a backend, recurring API fees, security responsibility, and a category-mapping problem that's only ever 80% right.</p>
+        <p>We chose <strong>manual logging with friction-killing UX</strong>: tap the FAB, the amount field auto-focuses with the number pad already open, last-used category pre-selected.</p>
+        <p style="font-weight: 600; color: var(--ink);">Brief target: 5 seconds. We ship at ~3.</p>
+      </div>
+      <div class="decision-img"><img src="screenshots/IMG_6669.PNG" alt="FastLog sheet showing 3-tap transaction logging"></div>
+    </article>
+
+    <article class="decision">
+      <div>
+        <span class="number">Decision 04</span>
+        <h3>Apple-Wallet calm as the visual anchor.</h3>
+        <p>We named references explicitly — <strong>Apple Wallet, Apple Money, Things 3</strong> — and anti-references just as explicitly:</p>
+        <p class="quote-thin">Anything with a streak counter, gamification, mascots, or a chart with more than two colors is out.</p>
+        <p>The palette:</p>
+        <div class="palette">
+          <div class="swatch"><div class="color" style="background:#FAFAF7"></div><div class="meta"><div class="name">Background</div><div class="hex">#FAFAF7</div></div></div>
+          <div class="swatch"><div class="color" style="background:#15151A"></div><div class="meta"><div class="name">Ink</div><div class="hex">#15151A</div></div></div>
+          <div class="swatch"><div class="color" style="background:var(--essentials)"></div><div class="meta"><div class="name">Essentials</div><div class="hex">#4A6FA5</div></div></div>
+          <div class="swatch"><div class="color" style="background:var(--growth)"></div><div class="meta"><div class="name">Growth</div><div class="hex">#5C8A6B</div></div></div>
+          <div class="swatch"><div class="color" style="background:var(--stability)"></div><div class="meta"><div class="name">Stability</div><div class="hex">#7A6B95</div></div></div>
+          <div class="swatch"><div class="color" style="background:var(--rewards)"></div><div class="meta"><div class="name">Rewards</div><div class="hex">#B5755C</div></div></div>
+        </div>
+        <p>The interface should look <em>expensive</em> because it is mostly <strong>empty</strong>.</p>
+      </div>
+      <div class="decision-img"><img src="screenshots/IMG_6678.PNG" alt="Priorities setup step showing calm aesthetic"></div>
+    </article>
+  </section>
+
+  <!-- INSIDE THE SYSTEM -->
+  <section>
+    <h2 class="section-title"><span class="ord">04</span>Inside the system</h2>
+    <p class="section-intro narrow">A few execution choices that mattered.</p>
+
+    <div class="system-grid">
+      <div class="system-tile">
+        <span class="emoji">🎨</span>
+        <h4>Tokens ship in code, not Figma</h4>
+        <p>Every spacing, type style, color, radius, shadow, motion lives in a typed TypeScript export. Audit at end of v1: <strong>one hardcoded hex across ~35 files</strong>. Dark-mode swap will be one line.</p>
+      </div>
+      <div class="system-tile">
+        <span class="emoji">📐</span>
+        <h4>Math shared across platforms</h4>
+        <p>Income, priorities, savings, the 50/25/15/10 split, and the safe-to-spend formula live in <code>@budgetplanner/core</code>. Consumed by the mobile app today. Could ship to web tomorrow.</p>
+      </div>
+      <div class="system-tile">
+        <span class="emoji">🛡️</span>
+        <h4>Defensive persistence</h4>
+        <p>The model already has one schema bump in it. Corrupt JSON, missing fields, or legacy shapes never throw. <strong>The app cannot crash on a storage edge case.</strong></p>
+      </div>
+      <div class="system-tile">
+        <span class="emoji">📊</span>
+        <h4>One chart, on purpose</h4>
+        <p>The brief allowed "no chart heavier than a thin progress arc." One mini arc on CategoryDetail, encoding two things at once — spend ratio and today's position in the month.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- PIVOT -->
+  <section>
+    <h2 class="section-title"><span class="ord">05</span>The pivot</h2>
+    <p class="section-intro narrow">Three weeks in, after living with the app on a real device, the founder said:</p>
+
+    <div class="narrow">
+      <p class="pull-quote">I want to add a bit of color. Can we do something more like Coinbase?</p>
+
+      <p style="color: var(--ink-secondary);">This was a real test. The brief was explicit — <strong style="color: var(--ink);">"Monochrome surface. Category accent colors appear only on the category bar fills"</strong> — and we'd held the line for the entire build. Two options: push back, or absorb the feedback and adjust.</p>
+
+      <p style="color: var(--ink-secondary);">We absorbed it. In a <strong style="color: var(--ink);">4-hour phase</strong>, the visual identity shifted:</p>
+
+      <table class="pivot-table">
+        <thead>
+          <tr><th>Surface</th><th>Before</th><th>After</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Primary buttons</td><td><span class="chip-ink">Ink</span></td><td><span class="chip-brand">Indigo</span></td></tr>
+          <tr><td>FAB ("+")</td><td><span class="chip-ink">Ink</span></td><td><span class="chip-brand">Indigo</span></td></tr>
+          <tr><td>Active tab icon + label</td><td><span class="chip-ink">Ink</span></td><td><span class="chip-brand">Indigo</span></td></tr>
+          <tr><td>Section links</td><td>Gray secondary</td><td><span class="chip-brand">Indigo</span></td></tr>
+          <tr><td>Filter chips (selected)</td><td>Ink-filled pill</td><td><span class="chip-brand-tint">Light-indigo pill</span></td></tr>
+          <tr><td>Type system</td><td>System font</td><td><strong>Poppins</strong> — full ladder</td></tr>
+          <tr><td>App icon + splash</td><td>Default</td><td>Custom logo</td></tr>
+          <tr><td>Category accents</td><td colspan="2" style="text-align: center; color: var(--ink-tertiary); font-style: italic;">Unchanged — they're functional, not brand</td></tr>
+        </tbody>
+      </table>
+
+      <p style="margin-top: 32px; padding: 24px; background: var(--brand-tint); border-left: 3px solid var(--brand); border-radius: 8px; color: var(--ink); font-size: 16px; line-height: 1.55;">
+        <strong>The lesson:</strong> Calm was the right starting point. Building with that constraint kept us from drowning the product in personality during initial development. Adding brand color <em>after</em> the structure was solid was a 4-hour change. Trying to design with brand color from day one would have produced a busier, more conventional fintech app.
+      </p>
+    </div>
+  </section>
+
+  <!-- WHAT WE'D CARRY FORWARD -->
+  <section>
+    <h2 class="section-title"><span class="ord">06</span>What we'd carry into the next project</h2>
+
+    <div class="narrow lessons">
+      <div class="lesson"><h4>The grill phase is the cheapest hour of any project.</h4><p>Resolving 8 foundational decisions before any design work saved weeks downstream.</p></div>
+      <div class="lesson"><h4>Tokens in code beat tokens in Figma.</h4><p>When a designer renames a token and it propagates to the build, the "design vs. dev sync" problem disappears.</p></div>
+      <div class="lesson"><h4>Naming is a design surface.</h4><p>"Transaction" not "expense." "Close out" not "wrap up." "Adjust plan" not "edit budget." These decisions are load-bearing.</p></div>
+      <div class="lesson"><h4>The brief should be a contract you're willing to break.</h4><p>We held the monochrome line for the full build, then broke it deliberately when feedback said to. A brief that's never revisited is one that's secretly being ignored.</p></div>
+      <div class="lesson"><h4>Restraint is the differentiator.</h4><p>Two notifications, ever. No streaks. No gamification. No social. Almost every product instinct in personal finance pushes toward <em>more</em>. Less is what makes this readable.</p></div>
+    </div>
+  </section>
+
+  <!-- GALLERY -->
+  <section>
+    <h2 class="section-title"><span class="ord">07</span>More from the build</h2>
+
+    <div class="gallery">
+      <figure><img src="screenshots/IMG_6668.PNG" alt="Home"><figcaption>Home, mid-month</figcaption></figure>
+      <figure><img src="screenshots/IMG_6670.PNG" alt="Activity feed"><figcaption>Activity feed</figcaption></figure>
+      <figure><img src="screenshots/IMG_6672.PNG" alt="Adjust plan menu"><figcaption>Adjust-plan hub</figcaption></figure>
+      <figure><img src="screenshots/IMG_6674.PNG" alt="Transaction detail with delete confirmation"><figcaption>Edit + delete</figcaption></figure>
+      <figure><img src="screenshots/IMG_6677.PNG" alt="Setup buckets/split step"><figcaption>Setup · category split</figcaption></figure>
+      <figure><img src="screenshots/IMG_6671.PNG" alt="Setup income step"><figcaption>Setup · income</figcaption></figure>
+    </div>
+  </section>
+
+</div>
+
+<footer>
+  <div class="logo">Break and Build</div>
+  <div class="tag">2026 · A calm budget that lives on your phone</div>
+  <div class="links">
+    <a href="DESIGN_BRIEF.md">Design Brief</a>
+    <a href="INFORMATION_ARCHITECTURE.md">IA</a>
+    <a href="DESIGN_TOKENS.md">Tokens</a>
+    <a href="TASKS.md">Tasks</a>
+    <a href="DESIGN_REVIEW.md">Review</a>
+  </div>
+</footer>
+
+</body>
+</html>
