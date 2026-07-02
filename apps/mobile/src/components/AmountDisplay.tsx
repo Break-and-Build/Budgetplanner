@@ -51,11 +51,12 @@ export function AmountDisplay({
     accessibilityLabel ??
     (symbol ? `${symbol}${formatted}` : formatted);
 
-  // Symbol is rendered slightly smaller than the digits at hero size — the
-  // currency mark should never compete with the number.
+  // Symbol is rendered one type-step smaller than the digits — the currency
+  // mark should never compete with the number. At hero it's 28pt next to 56pt
+  // digits (half-scale); 22pt read as too small/sunken on device.
   const symbolStyle =
     size === 'hero'
-      ? { ...t.type.title2, fontWeight: t.fontWeight.medium }
+      ? { ...t.type.title1, fontWeight: t.fontWeight.medium }
       : size === 'lg'
         ? { ...t.type.headline }
         : { ...t.type.amount };
