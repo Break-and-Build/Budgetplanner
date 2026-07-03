@@ -67,9 +67,31 @@ export function RecurringDetailScreen() {
     existing?.categoryId ?? 'rewards',
   );
   const [note, setNote] = useState(existing?.note ?? '');
-  const [dayOfMonth, setDayOfMonth] = useState<number>(existing?.dayOfMonth ?? 1);
+  // Day-of-month is held as a STRING while editing so the user can clear it,
+  // type freely, and we only coerce/clamp on blur. Storing a clamped number
+  // here (the old approach) meant the field could never be emptied and typing
+  // a second digit fought the user. See onDayChange / onDayBlur below.
+  const [dayText, setDayText] = useState<string>(
+    existing?.dayOfMonth ? String(existing.dayOfMonth) : '1',
+  );
   const [active, setActive] = useState<boolean>(existing?.active ?? true);
   const [confirmDelete, setConfirmDelete] = useState(false);
+
+  const dayOfMonth = Math.max(1, Math.min(31, parseInt(dayText, 10) || 1));
+
+  // While typing: accept only digits, cap length at 2, allow empty. No clamp
+  // yet — clamping mid-type is what blocked "26" before.
+  const onDayChange = (v: string) => {
+    const digits = v.replace(/[^0-9]/g, '').slice(0, 2);
+    setDayText(digits);
+  };
+  // On blur: settle to a valid 1–31 value so the field never shows blank/0/99.
+  const onDayBlur = () => {
+    const n = parseInt(dayText, 10);
+    if (!n || n < 1) setDayText('1');
+    else if (n > 31) setDayText('31');
+    else setDayText(String(n));
+  };
 
   const canSave = name.trim().length > 0 && amount > 0 && dayOfMonth >= 1 && dayOfMonth <= 31;
 
@@ -267,10 +289,9 @@ export function RecurringDetailScreen() {
         <FieldLabel>Day of month</FieldLabel>
         <View style={{ paddingHorizontal: t.space[4], paddingBottom: t.space[2] }}>
           <Input
-            value={String(dayOfMonth)}
-            onChangeText={(v) =>
-              setDayOfMonth(Math.max(1, Math.min(31, Number(v) || 1)))
-            }
+            value={dayText}
+            onChangeText={onDayChange}
+            onBlur={onDayBlur}
             keyboardType="numeric"
             accessibilityLabel="Day of month, 1 to 31"
           />

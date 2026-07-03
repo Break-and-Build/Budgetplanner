@@ -22,6 +22,8 @@ interface InputProps {
   autoFocus?: boolean;
   accessibilityLabel?: string;
   containerStyle?: StyleProp<ViewStyle>;
+  /** Fires when the field loses focus. Use for validate/clamp-on-blur. */
+  onBlur?: () => void;
   /** Optional left/right slots for currency symbols, units, etc. */
   leading?: React.ReactNode;
   trailing?: React.ReactNode;
@@ -43,6 +45,7 @@ export function Input({
   autoFocus,
   accessibilityLabel,
   containerStyle,
+  onBlur,
   leading,
   trailing,
 }: InputProps) {
@@ -83,7 +86,10 @@ export function Input({
         allowFontScaling
         maxFontSizeMultiplier={t.a11y.maxFontScale}
         onFocus={() => setFocused(true)}
-        onBlur={() => setFocused(false)}
+        onBlur={() => {
+          setFocused(false);
+          onBlur?.();
+        }}
         style={[
           textStyle,
           {
