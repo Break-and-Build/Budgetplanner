@@ -36,6 +36,7 @@ import {
   calcSavingsTotal,
   calcTotalIncome,
   calcTotalPriorities,
+  cleanPlan,
   defaultSplit,
 } from '@budgetplanner/core';
 
@@ -79,12 +80,12 @@ export function AdjustPlanScreen() {
   );
 
   const save = () => {
-    setPlan({
+    setPlan(cleanPlan({
       income: form.income,
       priorities: form.priorities,
       savings: form.savings,
       split: form.split,
-    });
+    }));
     nav.goBack();
   };
 

@@ -14,7 +14,7 @@
 import React, { useCallback, useState } from 'react';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { defaultSplit } from '@budgetplanner/core';
+import { cleanPlan, defaultSplit } from '@budgetplanner/core';
 
 import { useBudget } from '../state/BudgetContext';
 import { IncomeStep } from './setup/IncomeStep';
@@ -51,12 +51,12 @@ export function SetupRitual() {
   const back = useCallback(() => setCurrentStep((s) => Math.max(1, s - 1)), []);
 
   const commitAndFinish = useCallback(() => {
-    setPlan({
+    setPlan(cleanPlan({
       income: form.income,
       priorities: form.priorities,
       savings: form.savings,
       split: form.split,
-    });
+    }));
     // Replace the stack so the user can't back-swipe into setup.
     nav.reset({ index: 0, routes: [{ name: 'MainTabs' }] });
   }, [setPlan, form, nav]);
@@ -64,12 +64,12 @@ export function SetupRitual() {
   // The Buckets step's onNext commits the plan and advances to confirmation.
   // Confirmation then handles the actual navigation back to MainTabs.
   const finishBuckets = useCallback(() => {
-    setPlan({
+    setPlan(cleanPlan({
       income: form.income,
       priorities: form.priorities,
       savings: form.savings,
       split: form.split,
-    });
+    }));
     setCurrentStep(6);
   }, [setPlan, form]);
 

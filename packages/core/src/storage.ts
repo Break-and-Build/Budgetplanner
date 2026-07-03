@@ -37,6 +37,23 @@ export function defaultSplit(): SplitPlan {
   return { essentials: 50, growth: 25, stability: 15, rewards: 10 };
 }
 
+/**
+ * Drop blank rows (no name AND no amount/value) from a plan before saving.
+ * Setup steps let a user leave a trailing empty row while editing; this keeps
+ * those phantoms out of the persisted plan so totals and lists stay clean.
+ */
+export function cleanPlan(plan: BudgetPlan): BudgetPlan {
+  return {
+    income: plan.income.filter((i) => i.name.trim() || i.amount > 0),
+    priorities: plan.priorities.filter((p) => p.name.trim() || p.amount > 0),
+    savings: {
+      ...plan.savings,
+      entries: plan.savings.entries.filter((e) => e.name.trim() || e.value > 0),
+    },
+    split: plan.split,
+  };
+}
+
 /** Construct a fresh blob for a brand-new install. */
 export function emptyBudgetBlob(currency: string, now: Date = new Date()): BudgetBlob {
   return {

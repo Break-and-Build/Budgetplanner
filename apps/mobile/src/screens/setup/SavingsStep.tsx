@@ -38,11 +38,13 @@ export function SavingsStep({ step, totalSteps, mode = 'create', form, setForm, 
     );
   }, [form.savings, remainingAfterPriorities]);
 
-  // Valid if either disabled (skip) OR every entry is complete.
+  // Valid if either disabled (skip) OR — when enabled — there's at least one
+  // complete entry and no half-filled ones. Blank entries (no name AND no
+  // value) are ignored here and stripped at save time.
+  const nonEmpty = form.savings.entries.filter((e) => e.name.trim() || e.value > 0);
   const valid =
     !form.savings.enabled ||
-    (form.savings.entries.length > 0 &&
-      form.savings.entries.every((e) => e.name.trim() && e.value > 0));
+    (nonEmpty.length > 0 && nonEmpty.every((e) => e.name.trim() && e.value > 0));
 
   const toggleEnabled = (next: boolean) =>
     setForm((f) => ({

@@ -41,6 +41,7 @@ export {
   monthKeyFor,
   nextMonthKey,
   defaultSplit,
+  cleanPlan,
   emptyBudgetBlob,
   migrateV1ToV2,
   parseBudgetBlob,

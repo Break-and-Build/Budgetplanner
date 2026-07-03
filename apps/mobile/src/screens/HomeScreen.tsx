@@ -17,8 +17,13 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
-import { Plus, Settings as SettingsIcon, X as XIcon } from 'lucide-react-native';
-import { shouldShowMonthCloseBanner } from '@budgetplanner/core';
+import { ChevronRight, Plus, Settings as SettingsIcon, X as XIcon } from 'lucide-react-native';
+import {
+  calcSavingsTotal,
+  calcTotalIncome,
+  calcTotalPriorities,
+  shouldShowMonthCloseBanner,
+} from '@budgetplanner/core';
 
 import { useTokens } from '../theme/ThemeProvider';
 import { TabShell } from '../components/TabShell';
@@ -31,6 +36,7 @@ import { CATEGORY_IDS, CATEGORY_LABELS } from '../state/categories';
 import {
   allocatedByCategory,
   daysRemainingIn,
+  monthSafeToSpend,
   recentTransactions,
   spentByCategory,
   todaysSafeToSpend,
@@ -70,6 +76,24 @@ export function HomeScreen() {
   const allocated = useMemo(() => allocatedByCategory(currentMonth.plan), [currentMonth.plan]);
   const spent = useMemo(() => spentByCategory(currentMonth), [currentMonth]);
   const recent = useMemo(() => recentTransactions(currentMonth, 3), [currentMonth]);
+
+  // ─── Plan summary (income / priorities / savings → monthly budget) ─────────
+  // Surfaced on Home so users can see the numbers they entered during setup —
+  // and understand where "safe to spend" comes from (tester feedback).
+  const plan = currentMonth.plan;
+  const totalIncome = useMemo(() => calcTotalIncome(plan.income), [plan.income]);
+  const totalPriorities = useMemo(() => calcTotalPriorities(plan.priorities), [plan.priorities]);
+  const totalSavings = useMemo(
+    () => calcSavingsTotal(plan.savings, totalIncome - totalPriorities),
+    [plan.savings, totalIncome, totalPriorities],
+  );
+  const monthBudget = useMemo(() => monthSafeToSpend(plan), [plan]);
+
+  // Two "empty" states that otherwise render as a confusing wall of ₦0 bars:
+  //   • No income entered yet → prompt to add it
+  //   • Income entered but fully used by priorities + savings → explain why
+  const hasIncome = totalIncome > 0;
+  const fullyAllocated = hasIncome && monthBudget === 0;
 
   // ─── FAB ───────────────────────────────────────────────────────────────────
   // Opens the FastLogSheet via context. The sheet itself is rendered once at
@@ -173,9 +197,11 @@ export function HomeScreen() {
               { color: t.color.text.secondary, marginTop: t.space[2] },
             ]}
           >
-            {today > 0
-              ? `${daysLeft} ${daysLeft === 1 ? 'day' : 'days'} to go this month`
-              : `You're at today's limit · ${daysLeft} ${daysLeft === 1 ? 'day' : 'days'} to go`}
+            {!hasIncome
+              ? 'Set up your budget to get started'
+              : today > 0
+                ? `${daysLeft} ${daysLeft === 1 ? 'day' : 'days'} to go this month`
+                : `You're at today's limit · ${daysLeft} ${daysLeft === 1 ? 'day' : 'days'} to go`}
           </Text>
         </View>
 
@@ -275,74 +301,163 @@ export function HomeScreen() {
           </View>
         ) : null}
 
-        {/* ─── Category bars (no header — the bars are the content) ─────── */}
-        <View
-          style={{
-            marginHorizontal: t.space[4],
-            backgroundColor: t.color.bg.elevated,
-            borderRadius: t.radii.lg,
-            borderWidth: StyleSheet.hairlineWidth,
-            borderColor: t.color.border.hairline,
-            overflow: 'hidden',
-          }}
-        >
-          {CATEGORY_IDS.map((id, idx) => (
-            <View key={id}>
-              <CategoryBar
-                category={id}
-                label={CATEGORY_LABELS[id]}
-                allocated={allocated[id]}
-                spent={spent[id]}
-                symbol={symbol}
-                size="compact"
-                onPress={() => nav.navigate('CategoryDetail', { category: id })}
-              />
-              {idx < CATEGORY_IDS.length - 1 ? (
-                <View
-                  style={{
-                    height: StyleSheet.hairlineWidth,
-                    backgroundColor: t.color.border.hairline,
-                    marginLeft: t.space[4],
-                  }}
-                />
-              ) : null}
-            </View>
-          ))}
-        </View>
-
-        {/* ─── Adjust plan (low emphasis) ───────────────────────────────── */}
-        <View
-          style={{
-            paddingHorizontal: t.space[4],
-            paddingTop: t.space[3],
-            alignItems: 'flex-start',
-          }}
-        >
-          <Pressable
-            onPress={() => nav.navigate('AdjustPlan')}
-            accessibilityRole="button"
-            accessibilityLabel="Adjust this month's plan"
-            hitSlop={8}
-            style={({ pressed }) => ({
-              paddingVertical: t.space[2],
-              opacity: pressed ? 0.5 : 1,
-            })}
+        {!hasIncome ? (
+          /* ─── No-income prompt (replaces the wall of ₦0 bars) ────────── */
+          <View
+            style={{
+              marginHorizontal: t.space[4],
+              backgroundColor: t.color.bg.elevated,
+              borderRadius: t.radii.lg,
+              borderWidth: StyleSheet.hairlineWidth,
+              borderColor: t.color.border.hairline,
+              padding: t.space[5],
+            }}
           >
             <Text
               allowFontScaling
               maxFontSizeMultiplier={t.a11y.maxFontScale}
+              style={[t.type.title3, { color: t.color.text.primary }]}
+            >
+              Set up your budget
+            </Text>
+            <Text
+              allowFontScaling
+              maxFontSizeMultiplier={t.a11y.maxFontScale}
               style={[
-                t.type.footnote,
-                {
-                  color: t.color.brand.base,
-                  fontWeight: t.fontWeight.semibold,
-                },
+                t.type.subhead,
+                { color: t.color.text.secondary, marginTop: t.space[2], marginBottom: t.space[4] },
               ]}
             >
-              Adjust plan →
+              Add your income, priorities and savings, and we'll show what's safe
+              to spend across your four categories.
             </Text>
+            <Button
+              variant="primary"
+              onPress={() => nav.navigate('AdjustPlan', { focus: 'income' })}
+              fullWidth
+            >
+              Set up budget
+            </Button>
+          </View>
+        ) : (
+          /* ─── Category bars ─────────────────────────────────────────── */
+          <View
+            style={{
+              marginHorizontal: t.space[4],
+              backgroundColor: t.color.bg.elevated,
+              borderRadius: t.radii.lg,
+              borderWidth: StyleSheet.hairlineWidth,
+              borderColor: t.color.border.hairline,
+              overflow: 'hidden',
+            }}
+          >
+            {CATEGORY_IDS.map((id, idx) => (
+              <View key={id}>
+                <CategoryBar
+                  category={id}
+                  label={CATEGORY_LABELS[id]}
+                  allocated={allocated[id]}
+                  spent={spent[id]}
+                  symbol={symbol}
+                  size="compact"
+                  onPress={() => nav.navigate('CategoryDetail', { category: id })}
+                />
+                {idx < CATEGORY_IDS.length - 1 ? (
+                  <View
+                    style={{
+                      height: StyleSheet.hairlineWidth,
+                      backgroundColor: t.color.border.hairline,
+                      marginLeft: t.space[4],
+                    }}
+                  />
+                ) : null}
+              </View>
+            ))}
+          </View>
+        )}
+
+        {/* When income is fully committed to priorities + savings, the bars
+            are all ₦0 — say so plainly rather than leaving it a mystery. */}
+        {fullyAllocated ? (
+          <Text
+            allowFontScaling
+            maxFontSizeMultiplier={t.a11y.maxFontScale}
+            style={[
+              t.type.footnote,
+              {
+                color: t.color.text.secondary,
+                paddingHorizontal: t.space[4],
+                paddingTop: t.space[3],
+              },
+            ]}
+          >
+            Your income is fully committed to priorities and savings this month,
+            so there's nothing left to split. Adjust your plan to free some up.
+          </Text>
+        ) : null}
+
+        {/* ─── Your plan summary (income → priorities → savings → budget) ── */}
+        {hasIncome ? (
+          <Pressable
+            onPress={() => nav.navigate('AdjustPlan')}
+            accessibilityRole="button"
+            accessibilityLabel="View and adjust this month's plan"
+            style={({ pressed }) => ({
+              marginHorizontal: t.space[4],
+              marginTop: t.space[4],
+              padding: t.space[4],
+              backgroundColor: pressed ? t.color.bg.sunken : t.color.bg.elevated,
+              borderRadius: t.radii.lg,
+              borderWidth: StyleSheet.hairlineWidth,
+              borderColor: t.color.border.hairline,
+            })}
+          >
+            <View
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                marginBottom: t.space[3],
+              }}
+            >
+              <Text
+                allowFontScaling
+                maxFontSizeMultiplier={t.a11y.maxFontScale}
+                style={[
+                  t.type.caption2,
+                  { color: t.color.text.secondary, textTransform: 'uppercase' },
+                ]}
+              >
+                Your plan
+              </Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <Text
+                  allowFontScaling
+                  maxFontSizeMultiplier={t.a11y.maxFontScale}
+                  style={[
+                    t.type.footnote,
+                    { color: t.color.brand.base, fontWeight: t.fontWeight.semibold },
+                  ]}
+                >
+                  Adjust
+                </Text>
+                <ChevronRight size={16} color={t.color.brand.base} strokeWidth={2} />
+              </View>
+            </View>
+
+            <PlanRow label="Income" value={totalIncome} symbol={symbol} sign="" t={t} />
+            <PlanRow label="Priorities" value={totalPriorities} symbol={symbol} sign="−" t={t} />
+            <PlanRow label="Savings" value={totalSavings} symbol={symbol} sign="−" t={t} />
+            <View
+              style={{
+                height: StyleSheet.hairlineWidth,
+                backgroundColor: t.color.border.divider,
+                marginVertical: t.space[2],
+              }}
+            />
+            <PlanRow label="To spend this month" value={monthBudget} symbol={symbol} sign="" emphasis t={t} />
           </Pressable>
-        </View>
+        ) : null}
 
         {/* ─── Section: Recent activity ─────────────────────────────────── */}
         <View style={{ marginTop: t.space[7] }}>
@@ -446,6 +561,65 @@ export function HomeScreen() {
         </View>
       </ScrollView>
     </TabShell>
+  );
+}
+
+// ─── Plan summary row ────────────────────────────────────────────────────────
+// One line of the "Your plan" card: sign + label on the left, amount right.
+
+function PlanRow({
+  label,
+  value,
+  symbol,
+  sign,
+  emphasis = false,
+  t,
+}: {
+  label: string;
+  value: number;
+  symbol: string;
+  sign: '' | '−';
+  emphasis?: boolean;
+  t: ReturnType<typeof useTokens>;
+}) {
+  return (
+    <View
+      style={{
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingVertical: t.space[1],
+      }}
+    >
+      <Text
+        allowFontScaling
+        maxFontSizeMultiplier={t.a11y.maxFontScale}
+        style={[
+          emphasis ? t.type.headline : t.type.subhead,
+          { color: emphasis ? t.color.text.primary : t.color.text.secondary },
+        ]}
+      >
+        {label}
+      </Text>
+      <View style={{ flexDirection: 'row', alignItems: 'baseline' }}>
+        {sign ? (
+          <Text
+            allowFontScaling
+            maxFontSizeMultiplier={t.a11y.maxFontScale}
+            style={[t.type.subhead, { color: t.color.text.tertiary, marginRight: 2 }]}
+          >
+            {sign}
+          </Text>
+        ) : null}
+        <AmountDisplay
+          value={value}
+          symbol={symbol}
+          size={emphasis ? 'lg' : 'md'}
+          align="right"
+          accessibilityLabel=""
+        />
+      </View>
+    </View>
   );
 }
 
