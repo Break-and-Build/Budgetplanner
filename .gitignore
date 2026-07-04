@@ -43,3 +43,19 @@ web-build/
 
 # Local screenshot exports — design artifacts live in .design/.../screenshots/
 Screenshots/
+
+# Build artifacts (downloaded from EAS — never commit these)
+*.aab
+*.apk
+*.ipa
+
+# Signing certs / keys — SENSITIVE, never commit
+*.pem
+*.p8
+*.p12
+*.keystore
+*.jks
+*.mobileprovision
+
+# Local working folders
+Graphics/
