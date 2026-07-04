@@ -55,6 +55,10 @@ export function HomeScreen() {
     openFastLog,
     monthCloseBannerDismissed,
     dismissMonthCloseBanner,
+    remindersEnabled,
+    remindersPromptDismissed,
+    dismissRemindersPrompt,
+    setRemindersEnabled,
   } = useBudget();
 
   const now = new Date();
@@ -94,6 +98,14 @@ export function HomeScreen() {
   //   • Income entered but fully used by priorities + savings → explain why
   const hasIncome = totalIncome > 0;
   const fullyAllocated = hasIncome && monthBudget === 0;
+
+  // One-time reminders nudge: only once the user has a plan set up, reminders
+  // are still off, and they haven't dismissed/acted on the prompt before.
+  const showReminderNudge = hasIncome && !remindersEnabled && !remindersPromptDismissed;
+  const onEnableReminders = async () => {
+    await setRemindersEnabled(true);
+    dismissRemindersPrompt();
+  };
 
   // ─── FAB ───────────────────────────────────────────────────────────────────
   // Opens the FastLogSheet via context. The sheet itself is rendered once at
@@ -457,6 +469,69 @@ export function HomeScreen() {
             />
             <PlanRow label="To spend this month" value={monthBudget} symbol={symbol} sign="" emphasis t={t} />
           </Pressable>
+        ) : null}
+
+        {/* ─── One-time reminders nudge (U2 — discoverability) ──────────── */}
+        {showReminderNudge ? (
+          <View
+            style={{
+              marginHorizontal: t.space[4],
+              marginTop: t.space[4],
+              padding: t.space[4],
+              backgroundColor: t.color.brand.tint,
+              borderRadius: t.radii.lg,
+            }}
+          >
+            <View
+              style={{
+                flexDirection: 'row',
+                alignItems: 'flex-start',
+                justifyContent: 'space-between',
+              }}
+            >
+              <View style={{ flex: 1, paddingRight: t.space[3] }}>
+                <Text
+                  allowFontScaling
+                  maxFontSizeMultiplier={t.a11y.maxFontScale}
+                  style={[t.type.headline, { color: t.color.text.primary }]}
+                >
+                  Want a gentle nudge?
+                </Text>
+                <Text
+                  allowFontScaling
+                  maxFontSizeMultiplier={t.a11y.maxFontScale}
+                  style={[
+                    t.type.footnote,
+                    { color: t.color.text.secondary, marginTop: t.space[1] },
+                  ]}
+                >
+                  A quiet daily check-in and a month-end reminder. Two notifications,
+                  never more. Off any time in Settings.
+                </Text>
+              </View>
+              <Pressable
+                onPress={dismissRemindersPrompt}
+                accessibilityRole="button"
+                accessibilityLabel="Dismiss"
+                hitSlop={8}
+                style={({ pressed }) => ({ padding: t.space[1], opacity: pressed ? 0.5 : 1 })}
+              >
+                <XIcon size={18} color={t.color.text.tertiary} strokeWidth={1.75} />
+              </Pressable>
+            </View>
+            <View style={{ flexDirection: 'row', gap: t.space[3], marginTop: t.space[4] }}>
+              <View style={{ flex: 1 }}>
+                <Button variant="secondary" onPress={dismissRemindersPrompt} fullWidth>
+                  Not now
+                </Button>
+              </View>
+              <View style={{ flex: 1 }}>
+                <Button variant="primary" onPress={onEnableReminders} fullWidth>
+                  Turn on
+                </Button>
+              </View>
+            </View>
+          </View>
         ) : null}
 
         {/* ─── Section: Recent activity ─────────────────────────────────── */}

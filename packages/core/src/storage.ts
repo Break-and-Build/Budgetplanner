@@ -156,6 +156,8 @@ export function parseBudgetBlob(raw: unknown, now: Date = new Date()): BudgetBlo
       setupComplete: !!v2.setupComplete,
       // Same forward-compat dance for remindersEnabled.
       remindersEnabled: typeof v2.remindersEnabled === 'boolean' ? v2.remindersEnabled : false,
+      remindersPromptDismissed:
+        typeof v2.remindersPromptDismissed === 'boolean' ? v2.remindersPromptDismissed : false,
     };
   }
 

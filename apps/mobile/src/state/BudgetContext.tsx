@@ -90,6 +90,10 @@ interface BudgetContextValue {
    * UI can bounce-back if permission was denied.
    */
   setRemindersEnabled: (next: boolean) => Promise<boolean>;
+  /** True once the one-time "turn on reminders?" Home nudge has been resolved. */
+  remindersPromptDismissed: boolean;
+  /** Mark the reminders nudge resolved so it never shows again. */
+  dismissRemindersPrompt: () => void;
 
   // ─── Month close ──────────────────────────────────────────────────────────
   /**
@@ -342,6 +346,10 @@ export function BudgetProvider({ children }: { children: React.ReactNode }) {
     return false;
   }, []);
 
+  const dismissRemindersPrompt = useCallback(() => {
+    setBlob((prev) => ({ ...prev, remindersPromptDismissed: true }));
+  }, []);
+
   // Re-schedule on every app launch when reminders are enabled — the OS can
   // drop scheduled notifications after device reboots or app updates.
   useEffect(() => {
@@ -402,6 +410,8 @@ export function BudgetProvider({ children }: { children: React.ReactNode }) {
       removeRecurring,
       remindersEnabled: !!blob.remindersEnabled,
       setRemindersEnabled,
+      remindersPromptDismissed: !!blob.remindersPromptDismissed,
+      dismissRemindersPrompt,
       closeMonth,
       monthCloseBannerDismissed,
       dismissMonthCloseBanner,
@@ -427,6 +437,7 @@ export function BudgetProvider({ children }: { children: React.ReactNode }) {
       updateRecurring,
       removeRecurring,
       setRemindersEnabled,
+      dismissRemindersPrompt,
       closeMonth,
       monthCloseBannerDismissed,
       dismissMonthCloseBanner,

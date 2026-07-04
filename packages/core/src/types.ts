@@ -153,6 +153,11 @@ export interface BudgetBlob {
    * by default — respects the brief's "no preachy notifications" rule.
    */
   remindersEnabled?: boolean;
+  /**
+   * True once the user has seen (and acted on or dismissed) the one-time Home
+   * nudge offering to turn reminders on. Keeps the nudge from re-appearing.
+   */
+  remindersPromptDismissed?: boolean;
 }
 
 // ─── Legacy v1 shape (for migration only) ────────────────────────────────────
