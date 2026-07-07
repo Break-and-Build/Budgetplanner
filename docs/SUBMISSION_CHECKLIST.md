@@ -50,8 +50,13 @@ nothing sent to a server. Just the truth about your money, in your pocket.
 
 **Category:** Finance
 **Support email:** breakxbuildco@gmail.com
+**Support URL:** https://tvbixd.github.io/Budgetplanner1/support.html
 **Privacy policy URL:** https://tvbixd.github.io/Budgetplanner1/privacy-policy.html
+**Marketing URL (optional):** https://tvbixd.github.io/Budgetplanner1/support.html
+**SKU:** budgettracker-ios-001
+**Copyright:** 2026 Break and Build
 **Age rating:** 4+ / Everyone (answer "None" to every content question)
+**Release:** Manual (you press "Release" when ready)
 
 ---
 
@@ -139,8 +144,8 @@ Work top to bottom. Every field Apple will ask for is here.
 - [ ] Promotional Text (optional, 170)
 - [ ] Description (section 1)
 - [ ] Keywords (section 1)
-- [ ] Support URL (**required**) — e.g. your privacy-policy page or a contact page
-- [ ] Marketing URL (optional)
+- [ ] Support URL (**required**): https://tvbixd.github.io/Budgetplanner1/support.html
+- [ ] Marketing URL (optional): same support page, or leave blank
 
 **Build**
 - [ ] Select the uploaded build (after it finishes processing)
