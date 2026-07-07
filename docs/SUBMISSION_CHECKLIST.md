@@ -81,7 +81,10 @@ eas submit --platform ios --latest
 - Add your build to the Beta group
 - Fill **"What to Test"**: `Set up a budget, log a few spends, open the Plan
   tab, and try turning on reminders.`
-- **Sign-in required? → NO** (there is no login)
+- **Beta App Review Information** (required for external):
+  - Sign-in required? → **No**
+  - Contact: **First name, Last name, Phone, Email**
+  - Notes: `No account or login. All data is stored locally on device.`
 - Export compliance → already answered (encryption declared in the build)
 - **Submit for Beta App Review**
 
@@ -91,16 +94,78 @@ then Budget Tracker. New builds you upload appear automatically.
 
 ---
 
-## 3. iOS — Full App Store release (later, when beta looks good)
+## 3. iOS — Full App Store release — COMPLETE field list
 
-App Store Connect → your app → **(+) version / Prepare for Submission**:
-- [ ] Screenshots: upload `docs/store-assets/ios/01–05.png` (6.9" display)
-- [ ] Description, keywords, subtitle, support URL, privacy URL (section 1)
-- [ ] **App Privacy** → Data collection: **"Data Not Collected"** (nothing leaves the device)
-- [ ] Age rating questionnaire → all "None" → 4+
-- [ ] Pricing → Free
-- [ ] Build → select your latest TestFlight build
-- [ ] **Add for Review → Submit** (full review ~24–48h)
+Work top to bottom. Every field Apple will ask for is here.
+
+### 3a. Account-level (one-time, or it blocks everything)
+- [ ] **Agreements, Tax, and Banking** → accept the latest **"Free Apps"**
+      agreement (only the Account Holder can). Free app = no tax/banking forms.
+      If this isn't green, the Submit button is disabled.
+
+### 3b. Create the app record (My Apps → +) — if not already done
+- [ ] Platform: **iOS**
+- [ ] Name: **Budget Tracker**
+- [ ] Primary language: **English (U.S.)**
+- [ ] Bundle ID: **com.breakandbuild.budgettracker** (pick from list)
+- [ ] SKU: any unique internal string, e.g. **budgettracker-ios-001**
+- [ ] User Access: **Full Access**
+
+### 3c. App Information (left sidebar — applies to all versions)
+- [ ] Name, Subtitle (section 1)
+- [ ] Privacy Policy URL (section 1)
+- [ ] Category: Primary **Finance**; Secondary optional
+- [ ] Content Rights: **"No third-party content"**
+- [ ] Age Rating → complete questionnaire (all "None") → **4+**
+- [ ] License Agreement: keep Apple's **standard EULA**
+
+### 3d. Pricing and Availability
+- [ ] Price: **Free**
+- [ ] Availability: all countries (or pick)
+- [ ] Pre-orders: off
+
+### 3e. App Privacy (must be published before submit)
+- [ ] Privacy Policy URL
+- [ ] Data collection → **"Data Not Collected"**
+- [ ] Publish
+
+### 3f. The version page — "1.0 Prepare for Submission"
+**Media**
+- [ ] iPhone 6.9" screenshots: `docs/store-assets/ios/01–05.png` (1–10 images)
+- [ ] iPad screenshots: **not required** (app is iPhone-only, supportsTablet=false)
+- [ ] App Preview video: optional
+
+**Text**
+- [ ] Promotional Text (optional, 170)
+- [ ] Description (section 1)
+- [ ] Keywords (section 1)
+- [ ] Support URL (**required**) — e.g. your privacy-policy page or a contact page
+- [ ] Marketing URL (optional)
+
+**Build**
+- [ ] Select the uploaded build (after it finishes processing)
+
+**General Information**
+- [ ] App Icon → comes from the build automatically
+- [ ] Copyright: **2026 Break and Build**
+- [ ] Version: **1.0**
+
+**App Review Information (required)**
+- [ ] Sign-in required: **No**
+- [ ] Contact: **First name, Last name, Phone, Email** (all required)
+- [ ] Notes: `No account or login. All data is stored locally on the device;
+      nothing is sent to a server. Enable reminders under Settings to test
+      notifications.`
+- [ ] Attachment: optional
+
+**Release**
+- [ ] Version Release: **Manually / Automatically / Scheduled** (pick one)
+
+**Declarations (appear on submit)**
+- [ ] Export Compliance → pre-answered (encryption declared in build)
+- [ ] Advertising Identifier (IDFA): **No** — app doesn't use it
+
+- [ ] **Add for Review → Submit** (review ~24–48h)
 
 ---
 

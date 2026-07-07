@@ -16,7 +16,7 @@
       "**/*"
     ],
     "ios": {
-      "supportsTablet": true,
+      "supportsTablet": false,
       "bundleIdentifier": "com.breakandbuild.budgettracker",
       "icon": "./assets/AppIcon.icon",
       "infoPlist": {
