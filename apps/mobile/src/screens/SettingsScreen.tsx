@@ -31,6 +31,7 @@ import { BottomSheet } from '../components/BottomSheet';
 import { Button } from '../components/ui/Button';
 import { Switch } from '../components/ui/Switch';
 import { useBudget } from '../state/BudgetContext';
+import { sendTestReminder } from '../lib/notifications';
 import type { RootStackParamList } from '../types/navigation';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
@@ -51,6 +52,7 @@ export function SettingsScreen() {
   } = useBudget();
   const [confirmAction, setConfirmAction] = useState<null | 'all' | 'month'>(null);
   const [permissionDenied, setPermissionDenied] = useState(false);
+  const [testSent, setTestSent] = useState(false);
 
   const currentCurrency = getCurrency(blob.currency);
 
@@ -59,6 +61,11 @@ export function SettingsScreen() {
     // If the user wanted them on but the OS denied permission, surface the
     // "enable in iOS Settings" hint inline.
     setPermissionDenied(next && !granted);
+  };
+
+  const onSendTest = async () => {
+    await sendTestReminder();
+    setTestSent(true);
   };
 
   const onResetAll = async () => {
@@ -169,6 +176,20 @@ export function SettingsScreen() {
               accessibilityLabel="Toggle reminders"
             />
           </View>
+          {remindersEnabled ? (
+            <>
+              <Divider />
+              <Row
+                label="Send a test reminder"
+                sublabel={
+                  testSent
+                    ? 'Sent — it should arrive in about 5 seconds.'
+                    : 'Check notifications work on this device.'
+                }
+                onPress={onSendTest}
+              />
+            </>
+          ) : null}
         </Card>
         {permissionDenied ? (
           <Text
@@ -183,7 +204,7 @@ export function SettingsScreen() {
               },
             ]}
           >
-            Notifications are blocked. Enable Budget Planner in your device
+            Notifications are blocked. Enable Budget Tracker in your device
             Settings to turn reminders on.
           </Text>
         ) : null}

@@ -67,15 +67,38 @@ export async function scheduleDailyReminder(): Promise<void> {
     identifier: DAILY_ID,
     content: {
       title: "Today's budget",
-      body: 'Tap to see what you have left to spend.',
+      body: 'Tap to log the day and see what you have left to spend.',
       data: { type: 'daily' },
       sound: null,
     },
+    // DAILY is the purpose-built "every day at HH:MM" trigger. It repeats on
+    // its own (no `repeats` flag), and is more reliable than a CALENDAR trigger
+    // with partial date components for a plain daily reminder.
     trigger: {
-      type: Notifications.SchedulableTriggerInputTypes.CALENDAR,
+      type: Notifications.SchedulableTriggerInputTypes.DAILY,
       hour: 9,
       minute: 0,
-      repeats: true,
+    },
+  });
+}
+
+/**
+ * Fire a one-off test notification a few seconds from now. Lets a user confirm
+ * notifications actually work on their device without waiting until 9am.
+ * Not tied to the daily/month-end schedule and never repeats.
+ */
+export async function sendTestReminder(): Promise<void> {
+  await Notifications.scheduleNotificationAsync({
+    content: {
+      title: 'Test reminder',
+      body: "This is what your daily nudge looks like. You're all set.",
+      data: { type: 'test' },
+      sound: null,
+    },
+    trigger: {
+      type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
+      seconds: 5,
+      repeats: false,
     },
   });
 }
