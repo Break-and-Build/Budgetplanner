@@ -11,6 +11,7 @@ export type {
   SplitPlan,
   // v2 tracking types
   CategoryId,
+  CategoryDef,
   Transaction,
   BudgetPlan,
   MonthState,
@@ -18,6 +19,20 @@ export type {
   BudgetBlobV1,
   RecurringTransaction,
 } from './types';
+
+// Category helpers (percentage-based custom categories)
+export {
+  MIN_CATEGORIES,
+  MAX_CATEGORIES,
+  CATEGORY_PALETTE,
+  defaultCategories,
+  categoriesFromSplit,
+  totalPercent,
+  normalizeCategoryPercents,
+  categoriesAreValid,
+  newCategoryId,
+  nextPaletteColor,
+} from './categories';
 
 // Calculations
 export {

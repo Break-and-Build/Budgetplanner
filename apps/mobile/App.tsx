@@ -60,6 +60,7 @@ import { SettingsScreen } from './src/screens/SettingsScreen';
 import { AdjustPlanScreen } from './src/screens/AdjustPlanScreen';
 import { RecurringListScreen } from './src/screens/RecurringListScreen';
 import { RecurringDetailScreen } from './src/screens/RecurringDetailScreen';
+import { ManageCategoriesScreen } from './src/screens/ManageCategoriesScreen';
 import { FastLogSheet } from './src/screens/FastLogSheet';
 import { UndoSnackbar } from './src/components/UndoSnackbar';
 
@@ -210,6 +211,7 @@ function Root({ fontsLoaded }: { fontsLoaded: boolean }) {
         />
         <RootStack.Screen name="RecurringList" component={RecurringListScreen} />
         <RootStack.Screen name="RecurringDetail" component={RecurringDetailScreen} />
+        <RootStack.Screen name="ManageCategories" component={ManageCategoriesScreen} />
       </RootStack.Navigator>
     </NavigationContainer>
   );

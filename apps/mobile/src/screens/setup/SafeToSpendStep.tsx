@@ -108,7 +108,7 @@ export function SafeToSpendStep({ step, totalSteps, form, onNext, onBack }: Step
           },
         ]}
       >
-        Next you'll split this across four categories.
+        Next you'll split this across your categories.
       </Text>
     </ModalStackShell>
   );

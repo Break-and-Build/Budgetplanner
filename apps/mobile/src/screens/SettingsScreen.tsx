@@ -127,9 +127,15 @@ export function SettingsScreen() {
           />
         </Card>
 
-        {/* ─── Automation ───────────────────────────────────────────────── */}
-        <SectionLabel>Automation</SectionLabel>
+        {/* ─── Budget ───────────────────────────────────────────────────── */}
+        <SectionLabel>Budget</SectionLabel>
         <Card>
+          <Row
+            label="Categories"
+            sublabel="Rename, recolour, and set each category's share."
+            onPress={() => nav.navigate('ManageCategories')}
+          />
+          <Divider />
           <Row
             label="Recurring"
             sublabel="Subscriptions and monthly auto-logs."

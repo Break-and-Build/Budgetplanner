@@ -17,22 +17,21 @@ import {
   calcSavingsTotal,
   calcSafeToSpend,
 } from '@budgetplanner/core';
-import { CATEGORY_IDS } from './categories';
 
 /** Sum of all logged transactions for this month. */
 export function totalSpent(month: MonthState): number {
   return month.transactions.reduce((s, t) => s + t.amount, 0);
 }
 
-/** Sum of spent per category as a Record. Categories with no spend return 0. */
+/**
+ * Sum of spent per category id. Every current plan category is present (0 if
+ * unspent); transactions under a deleted category keep their old id so their
+ * spend still counts toward month totals.
+ */
 export function spentByCategory(month: MonthState): Record<CategoryId, number> {
-  const acc: Record<CategoryId, number> = {
-    essentials: 0,
-    growth: 0,
-    stability: 0,
-    rewards: 0,
-  };
-  for (const t of month.transactions) acc[t.categoryId] += t.amount;
+  const acc: Record<CategoryId, number> = {};
+  for (const c of month.plan.categories) acc[c.id] = 0;
+  for (const t of month.transactions) acc[t.categoryId] = (acc[t.categoryId] ?? 0) + t.amount;
   return acc;
 }
 
@@ -50,43 +49,44 @@ export function monthSafeToSpend(plan: BudgetPlan): number {
 }
 
 /**
- * Allocated amount per category, derived from the editable split preset.
- * Split percentages sum to 100; the four allocations sum exactly to the
- * flexible budget (rounding drift goes to essentials).
+ * Allocated amount per category id, derived from each category's percentage
+ * of the flexible budget. Percentages sum to 100; the allocations sum exactly
+ * to the flexible budget (rounding drift goes to the first category).
  */
 export function allocatedByCategory(plan: BudgetPlan): Record<CategoryId, number> {
   const total = monthSafeToSpend(plan);
-  const { essentials, growth, stability, rewards } = plan.split;
-  const e = Math.round(total * (essentials / 100));
-  const g = Math.round(total * (growth / 100));
-  const s = Math.round(total * (stability / 100));
-  const r = Math.round(total * (rewards / 100));
-  // Correct rounding drift so the four allocations sum exactly.
-  const drift = total - (e + g + s + r);
-  return {
-    essentials: e + drift,
-    growth: g,
-    stability: s,
-    rewards: r,
-  };
+  const out: Record<CategoryId, number> = {};
+  let allocated = 0;
+  for (const c of plan.categories) {
+    const v = Math.round(total * ((c.percent || 0) / 100));
+    out[c.id] = v;
+    allocated += v;
+  }
+  // Correct rounding drift so the allocations sum exactly to the budget.
+  if (plan.categories.length > 0) {
+    const first = plan.categories[0].id;
+    out[first] += total - allocated;
+  }
+  return out;
 }
 
 /** Remaining per category — allocated minus spent. Negative when over-budget. */
 export function remainingByCategory(month: MonthState): Record<CategoryId, number> {
   const allocated = allocatedByCategory(month.plan);
   const spent = spentByCategory(month);
-  return {
-    essentials: allocated.essentials - spent.essentials,
-    growth: allocated.growth - spent.growth,
-    stability: allocated.stability - spent.stability,
-    rewards: allocated.rewards - spent.rewards,
-  };
+  const out: Record<CategoryId, number> = {};
+  for (const c of month.plan.categories) {
+    out[c.id] = (allocated[c.id] ?? 0) - (spent[c.id] ?? 0);
+  }
+  return out;
 }
 
-/** Total remaining across all four categories. */
+/**
+ * Total remaining across the month: flexible budget minus everything spent
+ * (including spend under since-deleted categories, which has no allocation).
+ */
 export function monthRemaining(month: MonthState): number {
-  const r = remainingByCategory(month);
-  return CATEGORY_IDS.reduce((s, id) => s + r[id], 0);
+  return monthSafeToSpend(month.plan) - totalSpent(month);
 }
 
 /**
@@ -132,16 +132,18 @@ export function recentTransactions(month: MonthState, n: number): Transaction[] 
 
 /**
  * The category of the most recently logged transaction — used to pre-select
- * the FastLogSheet's category chip. Falls back to 'essentials' on a fresh
- * month because that's statistically the most likely first log.
+ * the FastLogSheet's category chip. Falls back to the first category on a
+ * fresh month, or when the last-used category has since been deleted.
  */
 export function lastUsedCategory(month: MonthState): CategoryId {
-  if (month.transactions.length === 0) return 'essentials';
+  const fallback = month.plan.categories[0]?.id ?? '';
+  if (month.transactions.length === 0) return fallback;
   let mostRecent = month.transactions[0];
   for (const t of month.transactions) {
     if (t.loggedAt > mostRecent.loggedAt) mostRecent = t;
   }
-  return mostRecent.categoryId;
+  const exists = month.plan.categories.some((c) => c.id === mostRecent.categoryId);
+  return exists ? mostRecent.categoryId : fallback;
 }
 
 function isoDateKey(d: Date): string {

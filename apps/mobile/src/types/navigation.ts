@@ -38,6 +38,8 @@ export type RootStackParamList = {
   RecurringList: undefined;
   /** Add or edit a single recurring rule. Pass `id: 'new'` to create. */
   RecurringDetail: { id: string };
+  /** Manage the plan's spending categories. */
+  ManageCategories: undefined;
 };
 
 declare global {

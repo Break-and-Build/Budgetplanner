@@ -60,8 +60,25 @@ export interface SplitPlan {
 // Added by the v1→v2 migration. The wizard model above continues to live inside
 // MonthState.plan; v2 layers transactions on top of it.
 
-/** The four budget categories. Locked enum — not user-defined in v1. */
-export type CategoryId = 'essentials' | 'growth' | 'stability' | 'rewards';
+/**
+ * A category id. User-defined categories use arbitrary string ids (generated
+ * at creation). Legacy installs keep the original four ids
+ * ('essentials' | 'growth' | 'stability' | 'rewards') so their transactions
+ * still map after the migration to custom categories.
+ */
+export type CategoryId = string;
+
+/**
+ * A user-defined spending category. Percentage-based: every category owns a
+ * share (`percent`) of the month's flexible budget, and all categories in a
+ * plan sum to 100. `color` is a hex string chosen from the preset palette.
+ */
+export interface CategoryDef {
+  id: string;
+  name: string;
+  color: string;
+  percent: number;
+}
 
 /**
  * A single logged spend. Money only — income is captured per-month in `plan`.
@@ -84,8 +101,11 @@ export interface BudgetPlan {
   income: IncomeSource[];
   priorities: PriorityExpense[];
   savings: SavingsData;
-  /** The four-category split. Editable preset; defaults to 50/25/15/10. */
-  split: SplitPlan;
+  /**
+   * The user's spending categories. Percentages sum to 100. Replaces the old
+   * fixed four-key `split`; migrated automatically from legacy blobs.
+   */
+  categories: CategoryDef[];
 }
 
 /**
@@ -158,6 +178,11 @@ export interface BudgetBlob {
    * nudge offering to turn reminders on. Keeps the nudge from re-appearing.
    */
   remindersPromptDismissed?: boolean;
+  /**
+   * True once the user has seen (or skipped) the first-run spotlight tour.
+   * Keeps the walkthrough from re-appearing on every launch.
+   */
+  walkthroughSeen?: boolean;
 }
 
 // ─── Legacy v1 shape (for migration only) ────────────────────────────────────

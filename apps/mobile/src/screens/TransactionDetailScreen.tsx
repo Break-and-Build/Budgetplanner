@@ -47,7 +47,7 @@ import { Input } from '../components/ui/Input';
 import { Button } from '../components/ui/Button';
 import { BottomSheet } from '../components/BottomSheet';
 import { useBudget } from '../state/BudgetContext';
-import { CATEGORY_IDS, CATEGORY_LABELS } from '../state/categories';
+import { resolveCategory } from '../state/categories';
 import type { RootStackParamList } from '../types/navigation';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
@@ -61,6 +61,7 @@ export function TransactionDetailScreen() {
   const { width } = useWindowDimensions();
   const {
     symbol,
+    categories,
     findTransaction,
     updateTransaction,
     removeTransaction,
@@ -256,14 +257,15 @@ export function TransactionDetailScreen() {
               paddingBottom: t.space[5],
             }}
           >
-            {CATEGORY_IDS.map((id) => {
+            {categories.map((c) => {
+              const id = c.id;
               const selected = categoryId === id;
               return (
                 <Pressable
                   key={id}
                   onPress={() => setCategoryId(id)}
                   accessibilityRole="button"
-                  accessibilityLabel={`${CATEGORY_LABELS[id]}${selected ? ', selected' : ''}`}
+                  accessibilityLabel={`${c.name}${selected ? ', selected' : ''}`}
                   accessibilityState={{ selected }}
                   style={({ pressed }) => [
                     {
@@ -285,7 +287,7 @@ export function TransactionDetailScreen() {
                   ]}
                 >
                   <CategoryDot
-                    category={id}
+                    color={c.color}
                     size={8}
                     style={{ marginRight: t.space[2] }}
                   />
@@ -300,7 +302,7 @@ export function TransactionDetailScreen() {
                       },
                     ]}
                   >
-                    {CATEGORY_LABELS[id]}
+                    {c.name}
                   </Text>
                 </Pressable>
               );
@@ -429,7 +431,7 @@ export function TransactionDetailScreen() {
           ]}
         >
           {symbol}
-          {tx.amount.toLocaleString('en-US')} from {CATEGORY_LABELS[tx.categoryId]}
+          {tx.amount.toLocaleString('en-US')} from {resolveCategory(categories, tx.categoryId).name}
           {tx.note ? ` · ${tx.note}` : ''}.
         </Text>
         <View style={{ flexDirection: 'row', gap: t.space[3], marginBottom: t.space[2] }}>

@@ -29,7 +29,7 @@ import { Input } from '../components/ui/Input';
 import { Button } from '../components/ui/Button';
 import { CategoryDot } from '../components/CategoryDot';
 import { useBudget } from '../state/BudgetContext';
-import { CATEGORY_IDS, CATEGORY_LABELS } from '../state/categories';
+import { resolveCategory } from '../state/categories';
 import { lastUsedCategory, remainingByCategory } from '../state/selectors';
 
 /**
@@ -51,9 +51,11 @@ export function FastLogSheet() {
     closeFastLog,
   } = useBudget();
 
+  const categories = currentMonth.plan.categories;
+
   // ─── Local form state ─────────────────────────────────────────────────────
   const [amount, setAmount] = useState(0);
-  const [categoryId, setCategoryId] = useState<CategoryId>('essentials');
+  const [categoryId, setCategoryId] = useState<CategoryId>(categories[0]?.id ?? '');
   const [note, setNote] = useState('');
 
   // Reset the form every time the sheet opens — never stale.
@@ -69,7 +71,8 @@ export function FastLogSheet() {
   // If the user is already over budget on the selected category, show a small
   // inline caption so they know before logging. No interruption.
   const remaining = useMemo(() => remainingByCategory(currentMonth), [currentMonth]);
-  const overOnSelected = remaining[categoryId] < 0;
+  const overOnSelected = (remaining[categoryId] ?? 0) < 0;
+  const selectedName = resolveCategory(categories, categoryId).name;
 
   // ─── Submit ───────────────────────────────────────────────────────────────
   const canLog = amount > 0;
@@ -161,13 +164,13 @@ export function FastLogSheet() {
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={{ gap: t.space[2] }}
         >
-          {CATEGORY_IDS.map((id) => (
+          {categories.map((c) => (
             <CategoryChip
-              key={id}
-              id={id}
-              label={CATEGORY_LABELS[id]}
-              selected={categoryId === id}
-              onPress={() => setCategoryId(id)}
+              key={c.id}
+              color={c.color}
+              label={c.name}
+              selected={categoryId === c.id}
+              onPress={() => setCategoryId(c.id)}
             />
           ))}
         </ScrollView>
@@ -183,7 +186,7 @@ export function FastLogSheet() {
               },
             ]}
           >
-            Already over budget in {CATEGORY_LABELS[categoryId]} this month.
+            Already over budget in {selectedName} this month.
           </Text>
         ) : null}
       </View>
@@ -233,13 +236,13 @@ export function FastLogSheet() {
 // Unselected = transparent with hairline border.
 
 interface CategoryChipProps {
-  id: CategoryId;
+  color: string;
   label: string;
   selected: boolean;
   onPress: () => void;
 }
 
-function CategoryChip({ id, label, selected, onPress }: CategoryChipProps) {
+function CategoryChip({ color, label, selected, onPress }: CategoryChipProps) {
   const t = useTokens();
   return (
     <Pressable
@@ -266,7 +269,7 @@ function CategoryChip({ id, label, selected, onPress }: CategoryChipProps) {
       ]}
     >
       <CategoryDot
-        category={id}
+        color={color}
         size={8}
         style={{ marginRight: t.space[2] }}
       />

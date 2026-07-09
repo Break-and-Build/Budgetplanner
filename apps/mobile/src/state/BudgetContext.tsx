@@ -36,6 +36,7 @@ import type {
   BudgetBlob,
   BudgetBlobV1,
   BudgetPlan,
+  CategoryDef,
   MonthState,
   RecurringTransaction,
   ReflectionData,
@@ -48,6 +49,11 @@ import {
   rollForward,
   runRecurringRules,
   symbolFor,
+  MAX_CATEGORIES,
+  MIN_CATEGORIES,
+  newCategoryId,
+  nextPaletteColor,
+  normalizeCategoryPercents,
 } from '@budgetplanner/core';
 
 /** Stable AsyncStorage key for the v2 blob. */
@@ -75,6 +81,24 @@ interface BudgetContextValue {
   // ─── Plan / currency ──────────────────────────────────────────────────────
   setPlan: (plan: BudgetPlan) => void;
   setCurrency: (code: string) => void;
+
+  // ─── Categories (user-defined, percentage-based) ──────────────────────────
+  /** The current month's categories. */
+  categories: CategoryDef[];
+  /** Replace the whole category list (Manage Categories screen owns validation). */
+  setCategories: (categories: CategoryDef[]) => void;
+  /** Append a blank category at 0% (no-op at the 8-category cap). */
+  addCategory: () => void;
+  /** Patch one category by id. */
+  updateCategory: (id: string, patch: Partial<CategoryDef>) => void;
+  /** Remove a category and rebalance the rest to 100% (no-op at 1 category). */
+  removeCategory: (id: string) => void;
+
+  // ─── First-run walkthrough ────────────────────────────────────────────────
+  /** True once the spotlight tour has been seen or skipped. */
+  walkthroughSeen: boolean;
+  /** Mark the tour resolved so it never auto-shows again. */
+  markWalkthroughSeen: () => void;
 
   // ─── Recurring transaction rules ──────────────────────────────────────────
   recurring: RecurringTransaction[];
@@ -289,6 +313,48 @@ export function BudgetProvider({ children }: { children: React.ReactNode }) {
     setBlob((prev) => ({ ...prev, currency: code }));
   }, []);
 
+  // ─── Categories ───────────────────────────────────────────────────────────
+  const patchCategories = (prev: BudgetBlob, categories: CategoryDef[]): BudgetBlob => ({
+    ...prev,
+    current: { ...prev.current, plan: { ...prev.current.plan, categories } },
+  });
+
+  const setCategories = useCallback((categories: CategoryDef[]) => {
+    setBlob((prev) => patchCategories(prev, categories));
+  }, []);
+
+  const addCategory = useCallback(() => {
+    setBlob((prev) => {
+      const cats = prev.current.plan.categories;
+      if (cats.length >= MAX_CATEGORIES) return prev;
+      return patchCategories(prev, [
+        ...cats,
+        { id: newCategoryId(), name: '', color: nextPaletteColor(cats), percent: 0 },
+      ]);
+    });
+  }, []);
+
+  const updateCategory = useCallback((id: string, patch: Partial<CategoryDef>) => {
+    setBlob((prev) =>
+      patchCategories(
+        prev,
+        prev.current.plan.categories.map((c) => (c.id === id ? { ...c, ...patch } : c)),
+      ),
+    );
+  }, []);
+
+  const removeCategory = useCallback((id: string) => {
+    setBlob((prev) => {
+      const cats = prev.current.plan.categories;
+      if (cats.length <= MIN_CATEGORIES) return prev;
+      return patchCategories(prev, normalizeCategoryPercents(cats.filter((c) => c.id !== id)));
+    });
+  }, []);
+
+  const markWalkthroughSeen = useCallback(() => {
+    setBlob((prev) => (prev.walkthroughSeen ? prev : { ...prev, walkthroughSeen: true }));
+  }, []);
+
   // ─── Recurring rules ──────────────────────────────────────────────────────
   const addRecurring = useCallback(
     (rule: Omit<RecurringTransaction, 'id' | 'createdAt'>) => {
@@ -404,6 +470,13 @@ export function BudgetProvider({ children }: { children: React.ReactNode }) {
       findTransaction,
       setPlan,
       setCurrency,
+      categories: blob.current.plan.categories,
+      setCategories,
+      addCategory,
+      updateCategory,
+      removeCategory,
+      walkthroughSeen: !!blob.walkthroughSeen,
+      markWalkthroughSeen,
       recurring: blob.recurring,
       addRecurring,
       updateRecurring,
@@ -433,6 +506,11 @@ export function BudgetProvider({ children }: { children: React.ReactNode }) {
       findTransaction,
       setPlan,
       setCurrency,
+      setCategories,
+      addCategory,
+      updateCategory,
+      removeCategory,
+      markWalkthroughSeen,
       addRecurring,
       updateRecurring,
       removeRecurring,

@@ -41,7 +41,6 @@ import { Button } from '../components/ui/Button';
 import { Switch } from '../components/ui/Switch';
 import { BottomSheet } from '../components/BottomSheet';
 import { useBudget } from '../state/BudgetContext';
-import { CATEGORY_IDS, CATEGORY_LABELS } from '../state/categories';
 import type { RootStackParamList } from '../types/navigation';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
@@ -52,7 +51,8 @@ export function RecurringDetailScreen() {
   const nav = useNavigation<Nav>();
   const route = useRoute<Route>();
   const insets = useSafeAreaInsets();
-  const { symbol, recurring, addRecurring, updateRecurring, removeRecurring } = useBudget();
+  const { symbol, recurring, categories, addRecurring, updateRecurring, removeRecurring } =
+    useBudget();
 
   const isNew = route.params.id === 'new';
   const existing = useMemo(
@@ -64,7 +64,7 @@ export function RecurringDetailScreen() {
   const [name, setName] = useState(existing?.name ?? '');
   const [amount, setAmount] = useState(existing?.amount ?? 0);
   const [categoryId, setCategoryId] = useState<CategoryId>(
-    existing?.categoryId ?? 'rewards',
+    existing?.categoryId ?? categories[0]?.id ?? '',
   );
   const [note, setNote] = useState(existing?.note ?? '');
   // Day-of-month is held as a STRING while editing so the user can clear it,
@@ -235,14 +235,15 @@ export function RecurringDetailScreen() {
             paddingBottom: t.space[5],
           }}
         >
-          {CATEGORY_IDS.map((id) => {
+          {categories.map((c) => {
+            const id = c.id;
             const selected = categoryId === id;
             return (
               <Pressable
                 key={id}
                 onPress={() => setCategoryId(id)}
                 accessibilityRole="button"
-                accessibilityLabel={`${CATEGORY_LABELS[id]}${selected ? ', selected' : ''}`}
+                accessibilityLabel={`${c.name}${selected ? ', selected' : ''}`}
                 accessibilityState={{ selected }}
                 style={({ pressed }) => [
                   {
@@ -263,7 +264,7 @@ export function RecurringDetailScreen() {
                 ]}
               >
                 <CategoryDot
-                  category={id}
+                  color={c.color}
                   size={8}
                   style={{ marginRight: t.space[2] }}
                 />
@@ -278,7 +279,7 @@ export function RecurringDetailScreen() {
                     },
                   ]}
                 >
-                  {CATEGORY_LABELS[id]}
+                  {c.name}
                 </Text>
               </Pressable>
             );

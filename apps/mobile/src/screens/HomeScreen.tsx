@@ -12,8 +12,16 @@
  * triggered. The "+" FAB belongs to the TabShell, not this screen.
  */
 
-import React, { useMemo } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import {
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  useWindowDimensions,
+  View,
+} from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
@@ -29,10 +37,11 @@ import { useTokens } from '../theme/ThemeProvider';
 import { TabShell } from '../components/TabShell';
 import { AmountDisplay } from '../components/AmountDisplay';
 import { CategoryBar } from '../components/CategoryBar';
+import { SpotlightTour, type SpotlightStep } from '../components/SpotlightTour';
 import { TransactionRow } from '../components/TransactionRow';
 import { Button } from '../components/ui/Button';
 import { useBudget } from '../state/BudgetContext';
-import { CATEGORY_IDS, CATEGORY_LABELS } from '../state/categories';
+import { resolveCategory } from '../state/categories';
 import {
   allocatedByCategory,
   daysRemainingIn,
@@ -59,9 +68,13 @@ export function HomeScreen() {
     remindersPromptDismissed,
     dismissRemindersPrompt,
     setRemindersEnabled,
+    walkthroughSeen,
+    markWalkthroughSeen,
   } = useBudget();
 
   const now = new Date();
+  const insets = useSafeAreaInsets();
+  const { width: screenW, height: screenH } = useWindowDimensions();
 
   // ─── Month-close banner ────────────────────────────────────────────────────
   // Appears from the 28th onward, or whenever the system clock has moved past
@@ -80,6 +93,7 @@ export function HomeScreen() {
   const allocated = useMemo(() => allocatedByCategory(currentMonth.plan), [currentMonth.plan]);
   const spent = useMemo(() => spentByCategory(currentMonth), [currentMonth]);
   const recent = useMemo(() => recentTransactions(currentMonth, 3), [currentMonth]);
+  const categories = currentMonth.plan.categories;
 
   // ─── Plan summary (income / priorities / savings → monthly budget) ─────────
   // Surfaced on Home so users can see the numbers they entered during setup —
@@ -105,6 +119,56 @@ export function HomeScreen() {
   const onEnableReminders = async () => {
     await setRemindersEnabled(true);
     dismissRemindersPrompt();
+  };
+
+  // ─── First-run spotlight tour ──────────────────────────────────────────────
+  // Fires once, after the user has a budget (so the hero + bars have real
+  // numbers to point at). Measures the two on-screen anchors; the log button
+  // is a fixed bottom-centre rect since it lives in the tab shell.
+  const heroRef = useRef<View>(null);
+  const categoryCardRef = useRef<View>(null);
+  const [tourSteps, setTourSteps] = useState<SpotlightStep[] | null>(null);
+
+  useEffect(() => {
+    if (walkthroughSeen || !hasIncome || categories.length === 0) return;
+    const timer = setTimeout(() => {
+      const hero = heroRef.current;
+      const card = categoryCardRef.current;
+      if (!hero || !card) return;
+      hero.measureInWindow((hx, hy, hw, hh) => {
+        card.measureInWindow((cx, cy, cw, ch) => {
+          setTourSteps([
+            {
+              rect: { x: hx, y: hy, width: hw, height: hh },
+              title: 'Your daily number',
+              body: "This is what's safe to spend today. Check it whenever you're deciding.",
+            },
+            {
+              rect: { x: cx, y: cy, width: cw, height: ch },
+              title: 'Your categories',
+              body: 'Each bar shows what’s left in a category this month. Tap one for detail.',
+            },
+            {
+              rect: {
+                x: screenW / 2 - 40,
+                y: screenH - insets.bottom - 128,
+                width: 80,
+                height: 80,
+              },
+              title: 'Log a spend',
+              body: 'Tap + to log a purchase in seconds — amount, category, done.',
+            },
+          ]);
+        });
+      });
+    }, 450);
+    return () => clearTimeout(timer);
+    // Only re-evaluate when the gating inputs change.
+  }, [walkthroughSeen, hasIncome, categories.length, screenW, screenH, insets.bottom]);
+
+  const finishTour = () => {
+    setTourSteps(null);
+    markWalkthroughSeen();
   };
 
   // ─── FAB ───────────────────────────────────────────────────────────────────
@@ -139,6 +203,7 @@ export function HomeScreen() {
       >
         {/* ─── Hero: today's safe-to-spend (gear inline with eyebrow) ───── */}
         <View
+          ref={heroRef}
           accessible
           accessibilityLabel={
             today > 0
@@ -354,6 +419,7 @@ export function HomeScreen() {
         ) : (
           /* ─── Category bars ─────────────────────────────────────────── */
           <View
+            ref={categoryCardRef}
             style={{
               marginHorizontal: t.space[4],
               backgroundColor: t.color.bg.elevated,
@@ -363,18 +429,18 @@ export function HomeScreen() {
               overflow: 'hidden',
             }}
           >
-            {CATEGORY_IDS.map((id, idx) => (
-              <View key={id}>
+            {categories.map((c, idx) => (
+              <View key={c.id}>
                 <CategoryBar
-                  category={id}
-                  label={CATEGORY_LABELS[id]}
-                  allocated={allocated[id]}
-                  spent={spent[id]}
+                  color={c.color}
+                  label={c.name}
+                  allocated={allocated[c.id] ?? 0}
+                  spent={spent[c.id] ?? 0}
                   symbol={symbol}
                   size="compact"
-                  onPress={() => nav.navigate('CategoryDetail', { category: id })}
+                  onPress={() => nav.navigate('CategoryDetail', { category: c.id })}
                 />
-                {idx < CATEGORY_IDS.length - 1 ? (
+                {idx < categories.length - 1 ? (
                   <View
                     style={{
                       height: StyleSheet.hairlineWidth,
@@ -616,7 +682,8 @@ export function HomeScreen() {
                   <TransactionRow
                     transaction={tx}
                     symbol={symbol}
-                    categoryLabel={CATEGORY_LABELS[tx.categoryId]}
+                    categoryLabel={resolveCategory(categories, tx.categoryId).name}
+                    categoryColor={resolveCategory(categories, tx.categoryId).color}
                     onPress={() => nav.navigate('TransactionDetail', { id: tx.id })}
                   />
                   {idx < recent.length - 1 ? (
@@ -635,6 +702,8 @@ export function HomeScreen() {
           )}
         </View>
       </ScrollView>
+
+      {tourSteps ? <SpotlightTour steps={tourSteps} onFinish={finishTour} /> : null}
     </TabShell>
   );
 }

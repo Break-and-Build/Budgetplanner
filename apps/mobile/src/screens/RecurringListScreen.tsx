@@ -31,7 +31,7 @@ import { HeaderIconButton } from '../components/ScreenHeader';
 import { AmountDisplay } from '../components/AmountDisplay';
 import { CategoryDot } from '../components/CategoryDot';
 import { useBudget } from '../state/BudgetContext';
-import { CATEGORY_LABELS } from '../state/categories';
+import { resolveCategory } from '../state/categories';
 import type { RootStackParamList } from '../types/navigation';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
@@ -40,7 +40,7 @@ export function RecurringListScreen() {
   const t = useTokens();
   const nav = useNavigation<Nav>();
   const insets = useSafeAreaInsets();
-  const { recurring, symbol } = useBudget();
+  const { recurring, symbol, categories } = useBudget();
 
   return (
     <View style={{ flex: 1, backgroundColor: t.color.bg.base, paddingTop: insets.top }}>
@@ -147,7 +147,7 @@ export function RecurringListScreen() {
                   })}
                 >
                   <CategoryDot
-                    category={rule.categoryId}
+                    color={resolveCategory(categories, rule.categoryId).color}
                     size={8}
                     style={{ marginRight: t.space[3] }}
                   />
@@ -169,7 +169,7 @@ export function RecurringListScreen() {
                         { color: t.color.text.secondary, marginTop: 2 },
                       ]}
                     >
-                      {CATEGORY_LABELS[rule.categoryId]} · day {rule.dayOfMonth}
+                      {resolveCategory(categories, rule.categoryId).name} · day {rule.dayOfMonth}
                     </Text>
                   </View>
                   <AmountDisplay

@@ -41,7 +41,8 @@ import { DayHeader } from '../components/DayHeader';
 import { TransactionRow } from '../components/TransactionRow';
 import { MiniProgressArc } from '../components/MiniProgressArc';
 import { useBudget } from '../state/BudgetContext';
-import { CATEGORY_LABELS } from '../state/categories';
+import { resolveCategory } from '../state/categories';
+import { categoryTint } from '../theme/categoryColor';
 import {
   allocatedByCategory,
   daysRemainingIn,
@@ -61,15 +62,16 @@ export function CategoryDetailScreen() {
   const { currentMonth, symbol } = useBudget();
 
   const categoryId: CategoryId = route.params.category;
-  const label = CATEGORY_LABELS[categoryId];
+  const cat = resolveCategory(currentMonth.plan.categories, categoryId);
+  const label = cat.name;
 
   // ─── Numbers ───────────────────────────────────────────────────────────────
   const allocated = useMemo(
-    () => allocatedByCategory(currentMonth.plan)[categoryId],
+    () => allocatedByCategory(currentMonth.plan)[categoryId] ?? 0,
     [currentMonth.plan, categoryId],
   );
   const spent = useMemo(
-    () => spentByCategory(currentMonth)[categoryId],
+    () => spentByCategory(currentMonth)[categoryId] ?? 0,
     [currentMonth, categoryId],
   );
   const remaining = allocated - spent;
@@ -135,7 +137,7 @@ export function CategoryDetailScreen() {
                 <HeaderIconButton onPress={nav.goBack} accessibilityLabel="Back">
                   <ChevronLeft size={26} color={t.color.text.primary} strokeWidth={1.75} />
                 </HeaderIconButton>
-                <CategoryDot category={categoryId} size={10} />
+                <CategoryDot color={cat.color} size={10} />
               </View>
 
               {/* Category title */}
@@ -175,8 +177,8 @@ export function CategoryDetailScreen() {
                 <MiniProgressArc
                   spentRatio={spentRatio}
                   monthRatio={monthRatio}
-                  color={t.color.category[categoryId].base}
-                  trackColor={t.color.category[categoryId].tint}
+                  color={cat.color}
+                  trackColor={categoryTint(cat.color)}
                   overBudget={over}
                   size={180}
                   strokeWidth={10}
@@ -227,6 +229,7 @@ export function CategoryDetailScreen() {
                 transaction={item}
                 symbol={symbol}
                 categoryLabel={label}
+                categoryColor={cat.color}
                 onPress={() => nav.navigate('TransactionDetail', { id: item.id })}
                 hideCategory
               />
@@ -272,7 +275,7 @@ export function CategoryDetailScreen() {
               <Pressable
                 onPress={() =>
                   nav.navigate('AdjustPlan', {
-                    focus: categoryId === 'essentials' ? 'priorities' : 'buckets',
+                    focus: 'buckets',
                   })
                 }
                 accessibilityRole="button"

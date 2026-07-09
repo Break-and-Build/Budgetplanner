@@ -14,7 +14,7 @@
 import React, { useCallback, useState } from 'react';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { cleanPlan, defaultSplit } from '@budgetplanner/core';
+import { cleanPlan, defaultCategories } from '@budgetplanner/core';
 
 import { useBudget } from '../state/BudgetContext';
 import { IncomeStep } from './setup/IncomeStep';
@@ -41,7 +41,10 @@ export function SetupRitual() {
     income: currentMonth.plan.income,
     priorities: currentMonth.plan.priorities,
     savings: currentMonth.plan.savings,
-    split: currentMonth.plan.split.essentials > 0 ? currentMonth.plan.split : defaultSplit(),
+    categories:
+      currentMonth.plan.categories.length > 0
+        ? currentMonth.plan.categories
+        : defaultCategories(),
   }));
 
   // 1..5 for data-entry steps; 6 is the Confirmation screen.
@@ -55,7 +58,7 @@ export function SetupRitual() {
       income: form.income,
       priorities: form.priorities,
       savings: form.savings,
-      split: form.split,
+      categories: form.categories,
     }));
     // Replace the stack so the user can't back-swipe into setup.
     nav.reset({ index: 0, routes: [{ name: 'MainTabs' }] });
@@ -68,7 +71,7 @@ export function SetupRitual() {
       income: form.income,
       priorities: form.priorities,
       savings: form.savings,
-      split: form.split,
+      categories: form.categories,
     }));
     setCurrentStep(6);
   }, [setPlan, form]);
