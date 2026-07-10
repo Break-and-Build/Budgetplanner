@@ -137,7 +137,7 @@ function MainTabs() {
 }
 
 function Root({ fontsLoaded }: { fontsLoaded: boolean }) {
-  const { isHydrated, blob } = useBudget();
+  const { isHydrated, blob, markSplashHidden } = useBudget();
 
   // Hide the native splash once BOTH font loading and AsyncStorage hydration
   // have finished, but never before the minimum total splash time has elapsed.
@@ -147,10 +147,15 @@ function Root({ fontsLoaded }: { fontsLoaded: boolean }) {
     const elapsed = Date.now() - APP_START;
     const remaining = Math.max(0, MIN_SPLASH_MS - elapsed);
     const id = setTimeout(() => {
-      SplashScreen.hideAsync().catch(() => {});
+      // Signal splashHidden only after hideAsync settles, so the first-run tour
+      // never opens its Modal while the splash is still up (which would keep the
+      // splash from dismissing on iOS).
+      SplashScreen.hideAsync()
+        .catch(() => {})
+        .finally(() => markSplashHidden());
     }, remaining);
     return () => clearTimeout(id);
-  }, [isHydrated, fontsLoaded]);
+  }, [isHydrated, fontsLoaded, markSplashHidden]);
 
   // While hydrating or loading fonts, render an empty pane in the brand
   // background color. The native splash is still up — this is just so React

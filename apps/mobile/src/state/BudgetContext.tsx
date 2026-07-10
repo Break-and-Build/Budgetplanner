@@ -99,6 +99,14 @@ interface BudgetContextValue {
   walkthroughSeen: boolean;
   /** Mark the tour resolved so it never auto-shows again. */
   markWalkthroughSeen: () => void;
+  /**
+   * True once the native splash screen has been hidden. The tour waits on this
+   * so its Modal never opens while the splash is still up (which would keep the
+   * splash from dismissing on iOS).
+   */
+  splashHidden: boolean;
+  /** Called by the app root right after SplashScreen.hideAsync(). */
+  markSplashHidden: () => void;
 
   // ─── Recurring transaction rules ──────────────────────────────────────────
   recurring: RecurringTransaction[];
@@ -355,6 +363,9 @@ export function BudgetProvider({ children }: { children: React.ReactNode }) {
     setBlob((prev) => (prev.walkthroughSeen ? prev : { ...prev, walkthroughSeen: true }));
   }, []);
 
+  const [splashHidden, setSplashHidden] = useState(false);
+  const markSplashHidden = useCallback(() => setSplashHidden(true), []);
+
   // ─── Recurring rules ──────────────────────────────────────────────────────
   const addRecurring = useCallback(
     (rule: Omit<RecurringTransaction, 'id' | 'createdAt'>) => {
@@ -477,6 +488,8 @@ export function BudgetProvider({ children }: { children: React.ReactNode }) {
       removeCategory,
       walkthroughSeen: !!blob.walkthroughSeen,
       markWalkthroughSeen,
+      splashHidden,
+      markSplashHidden,
       recurring: blob.recurring,
       addRecurring,
       updateRecurring,
@@ -511,6 +524,8 @@ export function BudgetProvider({ children }: { children: React.ReactNode }) {
       updateCategory,
       removeCategory,
       markWalkthroughSeen,
+      splashHidden,
+      markSplashHidden,
       addRecurring,
       updateRecurring,
       removeRecurring,

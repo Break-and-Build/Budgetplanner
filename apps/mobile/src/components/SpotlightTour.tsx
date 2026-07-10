@@ -11,7 +11,8 @@
  */
 
 import React, { useState } from 'react';
-import { Pressable, Text, useWindowDimensions, View } from 'react-native';
+import { Modal, Pressable, Text, useWindowDimensions, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTokens } from '../theme/ThemeProvider';
 
 export interface SpotlightRect {
@@ -38,6 +39,7 @@ const RADIUS = 16;
 
 export function SpotlightTour({ steps, onFinish }: SpotlightTourProps) {
   const t = useTokens();
+  const insets = useSafeAreaInsets();
   const { width, height } = useWindowDimensions();
   const [i, setI] = useState(0);
 
@@ -55,18 +57,20 @@ export function SpotlightTour({ steps, onFinish }: SpotlightTourProps) {
   const holeRight = hole.x + hole.width;
   const holeBottom = hole.y + hole.height;
 
-  // Place the caption below the hole if it sits in the top ~60% of the screen,
-  // otherwise above it.
-  const below = holeBottom < height * 0.6;
-  const captionTop = below ? holeBottom + 16 : undefined;
-  const captionBottom = below ? undefined : height - hole.y + 16;
+  // Pin the caption to whichever safe strip is clear of the highlight: if the
+  // hole reaches into the lower half, show the caption up top (below the status
+  // bar); otherwise anchor it near the bottom (above the home indicator).
+  const captionAtTop = holeBottom > height * 0.52;
+  const captionTop = captionAtTop ? insets.top + 12 : undefined;
+  const captionBottom = captionAtTop ? undefined : insets.bottom + 24;
 
   const advance = () => (last ? onFinish() : setI(i + 1));
 
   const dim = { position: 'absolute' as const, backgroundColor: DIM };
 
   return (
-    <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }} pointerEvents="box-none">
+    <Modal transparent visible animationType="fade" statusBarTranslucent onRequestClose={onFinish}>
+      <View style={{ flex: 1 }} pointerEvents="box-none">
       {/* Four dim panels around the hole (tap any to advance) */}
       <Pressable style={[dim, { top: 0, left: 0, right: 0, height: hole.y }]} onPress={advance} />
       <Pressable
@@ -190,6 +194,7 @@ export function SpotlightTour({ steps, onFinish }: SpotlightTourProps) {
           </View>
         </View>
       </View>
-    </View>
+      </View>
+    </Modal>
   );
 }

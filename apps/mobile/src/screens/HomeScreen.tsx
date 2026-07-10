@@ -70,6 +70,7 @@ export function HomeScreen() {
     setRemindersEnabled,
     walkthroughSeen,
     markWalkthroughSeen,
+    splashHidden,
   } = useBudget();
 
   const now = new Date();
@@ -127,44 +128,48 @@ export function HomeScreen() {
   // is a fixed bottom-centre rect since it lives in the tab shell.
   const heroRef = useRef<View>(null);
   const categoryCardRef = useRef<View>(null);
+  const fabRef = useRef<View>(null);
   const [tourSteps, setTourSteps] = useState<SpotlightStep[] | null>(null);
 
   useEffect(() => {
-    if (walkthroughSeen || !hasIncome || categories.length === 0) return;
+    if (walkthroughSeen || !hasIncome || categories.length === 0 || !splashHidden) return;
     const timer = setTimeout(() => {
       const hero = heroRef.current;
       const card = categoryCardRef.current;
       if (!hero || !card) return;
       hero.measureInWindow((hx, hy, hw, hh) => {
         card.measureInWindow((cx, cy, cw, ch) => {
-          setTourSteps([
-            {
-              rect: { x: hx, y: hy, width: hw, height: hh },
-              title: 'Your daily number',
-              body: "This is what's safe to spend today. Check it whenever you're deciding.",
-            },
-            {
-              rect: { x: cx, y: cy, width: cw, height: ch },
-              title: 'Your categories',
-              body: 'Each bar shows what’s left in a category this month. Tap one for detail.',
-            },
-            {
-              rect: {
-                x: screenW / 2 - 40,
-                y: screenH - insets.bottom - 128,
-                width: 80,
-                height: 80,
+          const build = (fx: number, fy: number, fw: number, fh: number) =>
+            setTourSteps([
+              {
+                rect: { x: hx, y: hy, width: hw, height: hh },
+                title: 'Your daily number',
+                body: "This is what's safe to spend today. Check it whenever you're deciding.",
               },
-              title: 'Log a spend',
-              body: 'Tap + to log a purchase in seconds — amount, category, done.',
-            },
-          ]);
+              {
+                rect: { x: cx, y: cy, width: cw, height: ch },
+                title: 'Your categories',
+                body: 'Each bar shows what’s left in a category this month. Tap one for detail.',
+              },
+              {
+                rect: { x: fx, y: fy, width: fw, height: fh },
+                title: 'Log a spend',
+                body: 'Tap + to log a purchase in seconds — amount, category, done.',
+              },
+            ]);
+          // Measure the real FAB so the highlight lands on it exactly; fall back
+          // to a bottom-right estimate if the ref isn't ready.
+          if (fabRef.current) {
+            fabRef.current.measureInWindow(build);
+          } else {
+            build(screenW - 88, screenH - insets.bottom - 132, 64, 64);
+          }
         });
       });
-    }, 450);
+    }, 400);
     return () => clearTimeout(timer);
     // Only re-evaluate when the gating inputs change.
-  }, [walkthroughSeen, hasIncome, categories.length, screenW, screenH, insets.bottom]);
+  }, [walkthroughSeen, hasIncome, categories.length, splashHidden, screenW, screenH, insets.bottom]);
 
   const finishTour = () => {
     setTourSteps(null);
@@ -178,6 +183,7 @@ export function HomeScreen() {
 
   const fab = (
     <Pressable
+      ref={fabRef}
       onPress={onFabPress}
       accessibilityRole="button"
       accessibilityLabel="Log a transaction"
