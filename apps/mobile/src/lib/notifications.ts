@@ -66,10 +66,12 @@ export async function scheduleDailyReminder(): Promise<void> {
   await Notifications.scheduleNotificationAsync({
     identifier: DAILY_ID,
     content: {
+      // NOTE: never pass `sound: null` — the native module expects
+      // `boolean | string`, and null makes scheduleNotificationAsync reject.
+      // Omitting `sound` is what gives us a silent notification on iOS.
       title: "Today's budget",
       body: 'Tap to log the day and see what you have left to spend.',
       data: { type: 'daily' },
-      sound: null,
     },
     // DAILY is the purpose-built "every day at HH:MM" trigger. It repeats on
     // its own (no `repeats` flag), and is more reliable than a CALENDAR trigger
@@ -93,7 +95,6 @@ export async function sendTestReminder(): Promise<void> {
       title: 'Test reminder',
       body: "This is what your daily nudge looks like. You're all set.",
       data: { type: 'test' },
-      sound: null,
     },
     trigger: {
       type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
@@ -126,7 +127,6 @@ export async function scheduleMonthEndReminder(): Promise<void> {
       title: `${monthName} is winding down`,
       body: 'Tap to close out and start the next month.',
       data: { type: 'monthEnd' },
-      sound: null,
     },
     trigger: {
       type: Notifications.SchedulableTriggerInputTypes.DATE,

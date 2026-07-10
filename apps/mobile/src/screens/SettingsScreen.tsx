@@ -52,7 +52,8 @@ export function SettingsScreen() {
   } = useBudget();
   const [confirmAction, setConfirmAction] = useState<null | 'all' | 'month'>(null);
   const [permissionDenied, setPermissionDenied] = useState(false);
-  const [testSent, setTestSent] = useState(false);
+  const [testState, setTestState] = useState<'idle' | 'sent' | 'error'>('idle');
+  const [testError, setTestError] = useState<string | null>(null);
 
   const currentCurrency = getCurrency(blob.currency);
 
@@ -63,9 +64,17 @@ export function SettingsScreen() {
     setPermissionDenied(next && !granted);
   };
 
+  // Never swallow the failure — if scheduling rejects, show why. A silent
+  // no-op here is exactly what made the broken `sound: null` so hard to spot.
   const onSendTest = async () => {
-    await sendTestReminder();
-    setTestSent(true);
+    try {
+      await sendTestReminder();
+      setTestState('sent');
+      setTestError(null);
+    } catch (e) {
+      setTestState('error');
+      setTestError(e instanceof Error ? e.message : String(e));
+    }
   };
 
   const onResetAll = async () => {
@@ -188,11 +197,14 @@ export function SettingsScreen() {
               <Row
                 label="Send a test reminder"
                 sublabel={
-                  testSent
-                    ? 'Sent — it should arrive in about 5 seconds.'
-                    : 'Check notifications work on this device.'
+                  testState === 'sent'
+                    ? 'Sent — it arrives in about 5 seconds.'
+                    : testState === 'error'
+                      ? `Couldn't schedule: ${testError}`
+                      : 'Check notifications work on this device.'
                 }
                 onPress={onSendTest}
+                destructive={testState === 'error'}
               />
             </>
           ) : null}

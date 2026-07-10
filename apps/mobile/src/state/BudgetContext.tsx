@@ -414,7 +414,15 @@ export function BudgetProvider({ children }: { children: React.ReactNode }) {
         setBlob((prev) => ({ ...prev, remindersEnabled: false }));
         return false;
       }
-      await scheduleAllReminders().catch(() => {});
+      // Don't claim success if scheduling actually failed — that would leave
+      // the toggle "on" while no notification is ever registered with the OS.
+      try {
+        await scheduleAllReminders();
+      } catch (e) {
+        console.warn('[reminders] failed to schedule:', e);
+        setBlob((prev) => ({ ...prev, remindersEnabled: false }));
+        return false;
+      }
       setBlob((prev) => ({ ...prev, remindersEnabled: true }));
       return true;
     }
@@ -431,7 +439,9 @@ export function BudgetProvider({ children }: { children: React.ReactNode }) {
   // drop scheduled notifications after device reboots or app updates.
   useEffect(() => {
     if (!isHydrated || !blob.remindersEnabled) return;
-    scheduleAllReminders().catch(() => {});
+    scheduleAllReminders().catch((e) => {
+      console.warn('[reminders] re-schedule on launch failed:', e);
+    });
   }, [isHydrated, blob.remindersEnabled]);
 
   // ─── Month close ──────────────────────────────────────────────────────────
