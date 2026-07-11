@@ -164,6 +164,7 @@ export function parseBudgetBlob(raw: unknown, now: Date = new Date()): BudgetBlo
           ? normalizeReminderTimes([{ hour: v2.reminderHour, minute: v2.reminderMinute ?? 0 }])
           : defaultReminderTimes(),
       walkthroughSeen: typeof v2.walkthroughSeen === 'boolean' ? v2.walkthroughSeen : false,
+      privacyMode: typeof v2.privacyMode === 'boolean' ? v2.privacyMode : false,
     };
   }
 

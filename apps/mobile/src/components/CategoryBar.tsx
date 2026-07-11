@@ -3,8 +3,9 @@ import { Animated, Easing, Pressable, StyleSheet, Text, View } from 'react-nativ
 import { useTokens } from '../theme/ThemeProvider';
 import { categoryTint } from '../theme/categoryColor';
 import { useReducedMotion } from '../theme/useReducedMotion';
-import { AmountDisplay } from './AmountDisplay';
+import { AmountDisplay, MASK } from './AmountDisplay';
 import { CategoryDot } from './CategoryDot';
+import { useBudget } from '../state/BudgetContext';
 
 interface CategoryBarProps {
   /** The category's accent colour (hex). */
@@ -37,6 +38,7 @@ export function CategoryBar({
   onPress,
 }: CategoryBarProps) {
   const t = useTokens();
+  const { privacyMode } = useBudget();
   const tint = categoryTint(color);
   const { multiplier } = useReducedMotion();
 
@@ -155,9 +157,9 @@ export function CategoryBar({
           maxFontSizeMultiplier={t.a11y.maxFontScale}
           style={[t.type.footnote, { color: t.color.text.secondary }]}
         >
-          {symbol}
-          {spent.toLocaleString('en-US')} of {symbol}
-          {allocated.toLocaleString('en-US')}
+          {privacyMode
+            ? `${symbol}${MASK} of ${symbol}${MASK}`
+            : `${symbol}${spent.toLocaleString('en-US')} of ${symbol}${allocated.toLocaleString('en-US')}`}
         </Text>
         {over ? (
           <Text
@@ -171,8 +173,7 @@ export function CategoryBar({
               },
             ]}
           >
-            {symbol}
-            {Math.abs(remaining).toLocaleString('en-US')} over
+            {privacyMode ? `${symbol}${MASK} over` : `${symbol}${Math.abs(remaining).toLocaleString('en-US')} over`}
           </Text>
         ) : null}
       </View>

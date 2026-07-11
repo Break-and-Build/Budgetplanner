@@ -25,7 +25,14 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
-import { ChevronRight, Plus, Settings as SettingsIcon, X as XIcon } from 'lucide-react-native';
+import {
+  ChevronRight,
+  Eye,
+  EyeOff,
+  Plus,
+  Settings as SettingsIcon,
+  X as XIcon,
+} from 'lucide-react-native';
 import {
   calcSavingsTotal,
   calcTotalIncome,
@@ -66,6 +73,8 @@ export function HomeScreen() {
     dismissMonthCloseBanner,
     walkthroughSeen,
     markWalkthroughSeen,
+    privacyMode,
+    togglePrivacyMode,
     splashHidden,
   } = useBudget();
 
@@ -237,21 +246,36 @@ export function HomeScreen() {
             >
               Safe to spend today
             </Text>
-            <Pressable
-              onPress={() => nav.navigate('Settings')}
-              accessibilityRole="button"
-              accessibilityLabel="Open settings"
-              // 14pt hitSlop on every side → tap target is (22 + 28) = 50pt,
-              // comfortably above the 44pt minimum, while the visible icon
-              // stays small enough not to dominate the caption row.
-              hitSlop={14}
-              style={({ pressed }) => ({
-                opacity: pressed ? 0.5 : 1,
-                padding: t.space[1],
-              })}
-            >
-              <SettingsIcon size={20} color={t.color.text.primary} strokeWidth={1.75} />
-            </Pressable>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.space[3] }}>
+              <Pressable
+                onPress={togglePrivacyMode}
+                accessibilityRole="button"
+                accessibilityLabel={privacyMode ? 'Show amounts' : 'Hide amounts'}
+                hitSlop={14}
+                style={({ pressed }) => ({ opacity: pressed ? 0.5 : 1, padding: t.space[1] })}
+              >
+                {privacyMode ? (
+                  <EyeOff size={20} color={t.color.text.secondary} strokeWidth={1.75} />
+                ) : (
+                  <Eye size={20} color={t.color.text.secondary} strokeWidth={1.75} />
+                )}
+              </Pressable>
+              <Pressable
+                onPress={() => nav.navigate('Settings')}
+                accessibilityRole="button"
+                accessibilityLabel="Open settings"
+                // 14pt hitSlop on every side → tap target is (22 + 28) = 50pt,
+                // comfortably above the 44pt minimum, while the visible icon
+                // stays small enough not to dominate the caption row.
+                hitSlop={14}
+                style={({ pressed }) => ({
+                  opacity: pressed ? 0.5 : 1,
+                  padding: t.space[1],
+                })}
+              >
+                <SettingsIcon size={20} color={t.color.text.primary} strokeWidth={1.75} />
+              </Pressable>
+            </View>
           </View>
           <AmountDisplay
             value={today}

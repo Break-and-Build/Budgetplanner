@@ -1,6 +1,10 @@
 import React from 'react';
 import { Text, View, type StyleProp, type TextStyle } from 'react-native';
 import { useTokens } from '../theme/ThemeProvider';
+import { useBudget } from '../state/BudgetContext';
+
+/** Mask token used everywhere amounts are hidden in privacy mode. */
+export const MASK = '••••';
 
 type Size = 'md' | 'lg' | 'hero';
 
@@ -40,16 +44,19 @@ export function AmountDisplay({
   style,
 }: AmountDisplayProps) {
   const t = useTokens();
+  const { privacyMode } = useBudget();
   const typeStyle =
     size === 'hero' ? t.type.hero : size === 'lg' ? t.type.title2 : t.type.amount;
 
   // Format: thousand separators on the integer, preserve decimals up to 2dp.
-  const formatted = formatAmount(value);
+  // In privacy mode, replace the digits with a fixed mask so the magnitude
+  // isn't leaked by length.
+  const formatted = privacyMode ? MASK : formatAmount(value);
 
   // Accessibility — natural-language readout: "Eighty-five Naira" etc.
-  const a11y =
-    accessibilityLabel ??
-    (symbol ? `${symbol}${formatted}` : formatted);
+  const a11y = privacyMode
+    ? 'Amount hidden'
+    : accessibilityLabel ?? (symbol ? `${symbol}${formatted}` : formatted);
 
   // Symbol is rendered one type-step smaller than the digits — the currency
   // mark should never compete with the number. At hero it's 28pt next to 56pt

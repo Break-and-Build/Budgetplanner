@@ -102,6 +102,12 @@ interface BudgetContextValue {
   walkthroughSeen: boolean;
   /** Mark the tour resolved so it never auto-shows again. */
   markWalkthroughSeen: () => void;
+
+  // ─── Privacy mode ─────────────────────────────────────────────────────────
+  /** When true, all amounts render masked (••••). */
+  privacyMode: boolean;
+  /** Flip privacy mode on/off (persisted). */
+  togglePrivacyMode: () => void;
   /**
    * True once the native splash screen has been hidden. The tour waits on this
    * so its Modal never opens while the splash is still up (which would keep the
@@ -361,6 +367,10 @@ export function BudgetProvider({ children }: { children: React.ReactNode }) {
     setBlob((prev) => (prev.walkthroughSeen ? prev : { ...prev, walkthroughSeen: true }));
   }, []);
 
+  const togglePrivacyMode = useCallback(() => {
+    setBlob((prev) => ({ ...prev, privacyMode: !prev.privacyMode }));
+  }, []);
+
   const [splashHidden, setSplashHidden] = useState(false);
   const markSplashHidden = useCallback(() => setSplashHidden(true), []);
 
@@ -494,6 +504,8 @@ export function BudgetProvider({ children }: { children: React.ReactNode }) {
       removeCategory,
       walkthroughSeen: !!blob.walkthroughSeen,
       markWalkthroughSeen,
+      privacyMode: !!blob.privacyMode,
+      togglePrivacyMode,
       splashHidden,
       markSplashHidden,
       recurring: blob.recurring,
@@ -529,6 +541,7 @@ export function BudgetProvider({ children }: { children: React.ReactNode }) {
       updateCategory,
       removeCategory,
       markWalkthroughSeen,
+      togglePrivacyMode,
       splashHidden,
       markSplashHidden,
       addRecurring,

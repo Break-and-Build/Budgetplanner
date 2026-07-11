@@ -193,6 +193,12 @@ export interface BudgetBlob {
    * Keeps the walkthrough from re-appearing on every launch.
    */
   walkthroughSeen?: boolean;
+  /**
+   * Privacy mode — when true, all monetary amounts render masked (••••) so
+   * figures aren't visible to someone glancing at the screen. Toggle lives on
+   * Home. Off by default.
+   */
+  privacyMode?: boolean;
 }
 
 // ─── Legacy v1 shape (for migration only) ────────────────────────────────────

@@ -42,6 +42,7 @@ import { HeaderIconButton } from '../components/ScreenHeader';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Platform } from 'react-native';
 import { CategoryDot } from '../components/CategoryDot';
+import { MASK } from '../components/AmountDisplay';
 import { CurrencyInput } from '../components/CurrencyInput';
 import { Input } from '../components/ui/Input';
 import { Button } from '../components/ui/Button';
@@ -62,6 +63,7 @@ export function TransactionDetailScreen() {
   const {
     symbol,
     categories,
+    privacyMode,
     findTransaction,
     updateTransaction,
     removeTransaction,
@@ -431,7 +433,8 @@ export function TransactionDetailScreen() {
           ]}
         >
           {symbol}
-          {tx.amount.toLocaleString('en-US')} from {resolveCategory(categories, tx.categoryId).name}
+          {privacyMode ? MASK : tx.amount.toLocaleString('en-US')} from{' '}
+          {resolveCategory(categories, tx.categoryId).name}
           {tx.note ? ` · ${tx.note}` : ''}.
         </Text>
         <View style={{ flexDirection: 'row', gap: t.space[3], marginBottom: t.space[2] }}>
