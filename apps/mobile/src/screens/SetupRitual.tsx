@@ -22,13 +22,14 @@ import { PrioritiesStep } from './setup/PrioritiesStep';
 import { SavingsStep } from './setup/SavingsStep';
 import { SafeToSpendStep } from './setup/SafeToSpendStep';
 import { BucketsStep } from './setup/BucketsStep';
+import { RecurringSetupStep } from './setup/RecurringSetupStep';
 import { ConfirmationStep } from './setup/ConfirmationStep';
 import type { SetupFormState } from './setup/types';
 import type { RootStackParamList } from '../types/navigation';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 
-const TOTAL_STEPS = 5;
+const TOTAL_STEPS = 6;
 
 export function SetupRitual() {
   const nav = useNavigation<Nav>();
@@ -47,7 +48,7 @@ export function SetupRitual() {
         : defaultCategories(),
   }));
 
-  // 1..5 for data-entry steps; 6 is the Confirmation screen.
+  // 1..6 for data-entry steps; 7 is the Confirmation screen.
   const [currentStep, setCurrentStep] = useState(1);
 
   const next = useCallback(() => setCurrentStep((s) => s + 1), []);
@@ -64,8 +65,9 @@ export function SetupRitual() {
     nav.reset({ index: 0, routes: [{ name: 'MainTabs' }] });
   }, [setPlan, form, nav]);
 
-  // The Buckets step's onNext commits the plan and advances to confirmation.
-  // Confirmation then handles the actual navigation back to MainTabs.
+  // The Buckets step's onNext commits the plan and advances to the Recurring
+  // step. Committing here means the Recurring step (and the RecurringDetail
+  // form it opens) already sees the finalized categories.
   const finishBuckets = useCallback(() => {
     setPlan(cleanPlan({
       income: form.income,
@@ -97,6 +99,8 @@ export function SetupRitual() {
     case 5:
       return <BucketsStep {...sharedProps} onNext={finishBuckets} />;
     case 6:
+      return <RecurringSetupStep {...sharedProps} />;
+    case 7:
     default:
       return <ConfirmationStep onFinish={commitAndFinish} />;
   }
