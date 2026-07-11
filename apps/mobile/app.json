@@ -20,7 +20,8 @@
       "bundleIdentifier": "com.breakandbuild.budgettracker",
       "icon": "./assets/AppIcon.icon",
       "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSFaceIDUsageDescription": "Budget Tracker uses Face ID to unlock the app so only you can see your budget."
       }
     },
     "android": {
@@ -51,7 +52,8 @@
           "icon": "./assets/notification-icon.png",
           "color": "#5046E6"
         }
-      ]
+      ],
+      "expo-secure-store"
     ],
     "extra": {
       "eas": {

@@ -32,7 +32,10 @@ import { useTokens } from '../theme/ThemeProvider';
 import { HeaderIconButton } from '../components/ScreenHeader';
 import { BottomSheet } from '../components/BottomSheet';
 import { Button } from '../components/ui/Button';
+import { Switch } from '../components/ui/Switch';
 import { useBudget } from '../state/BudgetContext';
+import { useAppLock } from '../state/AppLockContext';
+import { biometricAvailable } from '../lib/appLock';
 import type { RootStackParamList } from '../types/navigation';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
@@ -55,6 +58,17 @@ export function SettingsScreen() {
   const [confirmAction, setConfirmAction] = useState<null | 'all' | 'month'>(null);
   // Which reminder-time row has its picker open (index), or null.
   const [editingTime, setEditingTime] = useState<number | null>(null);
+
+  const {
+    enabled: lockEnabled,
+    biometricEnabled,
+    disable: disableLock,
+    setBiometric,
+  } = useAppLock();
+  const [bioAvailable, setBioAvailable] = useState(false);
+  React.useEffect(() => {
+    biometricAvailable().then(setBioAvailable);
+  }, []);
 
   const currentCurrency = getCurrency(blob.currency);
 
@@ -238,6 +252,54 @@ export function SettingsScreen() {
             ? 'Add up to five times a day — morning, midday, evening. Plus a reminder on the 28th to close out the month. Turn reminders off in your device Settings.'
             : 'Notifications are turned off. Enable them for Budget Tracker in your device Settings to get reminders.'}
         </Text>
+
+        {/* ─── Privacy & security ───────────────────────────────────────── */}
+        <SectionLabel>Privacy &amp; security</SectionLabel>
+        <Card>
+          {!lockEnabled ? (
+            <Row
+              label="App lock"
+              sublabel="Require a PIN (or Face ID) to open the app."
+              value="Off"
+              onPress={() => nav.navigate('AppLockSetup', { mode: 'enable' })}
+            />
+          ) : (
+            <>
+              {bioAvailable ? (
+                <>
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      paddingHorizontal: t.space[4],
+                      paddingVertical: t.space[3],
+                      minHeight: 56,
+                    }}
+                  >
+                    <View style={{ flex: 1, paddingRight: t.space[3] }}>
+                      <Text
+                        allowFontScaling
+                        maxFontSizeMultiplier={t.a11y.maxFontScale}
+                        style={[t.type.body, { color: t.color.text.primary }]}
+                      >
+                        Unlock with Face ID / Touch ID
+                      </Text>
+                    </View>
+                    <Switch
+                      value={biometricEnabled}
+                      onValueChange={(v) => setBiometric(v)}
+                      accessibilityLabel="Toggle biometric unlock"
+                    />
+                  </View>
+                  <Divider />
+                </>
+              ) : null}
+              <Row label="Change PIN" onPress={() => nav.navigate('AppLockSetup', { mode: 'change' })} />
+              <Divider />
+              <Row label="Turn off app lock" destructive onPress={() => disableLock()} />
+            </>
+          )}
+        </Card>
 
         {/* ─── Reset ────────────────────────────────────────────────────── */}
         <SectionLabel>Reset</SectionLabel>

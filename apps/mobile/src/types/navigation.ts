@@ -40,6 +40,8 @@ export type RootStackParamList = {
   RecurringDetail: { id: string };
   /** Manage the plan's spending categories. */
   ManageCategories: undefined;
+  /** Create/confirm a PIN to enable the app lock, or change an existing PIN. */
+  AppLockSetup: { mode?: 'enable' | 'change' } | undefined;
 };
 
 declare global {

@@ -61,6 +61,8 @@ import { AdjustPlanScreen } from './src/screens/AdjustPlanScreen';
 import { RecurringListScreen } from './src/screens/RecurringListScreen';
 import { RecurringDetailScreen } from './src/screens/RecurringDetailScreen';
 import { ManageCategoriesScreen } from './src/screens/ManageCategoriesScreen';
+import { AppLockSetupScreen } from './src/screens/AppLockSetupScreen';
+import { AppLockProvider } from './src/state/AppLockContext';
 import { FastLogSheet } from './src/screens/FastLogSheet';
 import { UndoSnackbar } from './src/components/UndoSnackbar';
 
@@ -217,6 +219,7 @@ function Root({ fontsLoaded }: { fontsLoaded: boolean }) {
         <RootStack.Screen name="RecurringList" component={RecurringListScreen} />
         <RootStack.Screen name="RecurringDetail" component={RecurringDetailScreen} />
         <RootStack.Screen name="ManageCategories" component={ManageCategoriesScreen} />
+        <RootStack.Screen name="AppLockSetup" component={AppLockSetupScreen} />
       </RootStack.Navigator>
     </NavigationContainer>
   );
@@ -237,16 +240,18 @@ export default function App() {
   return (
     <SafeAreaProvider>
       <ThemeProvider colorScheme="light">
-        <BudgetProvider>
-          <View style={styles.root}>
-            <Root fontsLoaded={fontsLoaded} />
-            {/* Global UI — sits above the navigator so it's available from
-                every screen via openFastLog() / showUndoSnackbar() in
-                BudgetContext. */}
-            <FastLogSheet />
-            <UndoSnackbar />
-          </View>
-        </BudgetProvider>
+        <AppLockProvider>
+          <BudgetProvider>
+            <View style={styles.root}>
+              <Root fontsLoaded={fontsLoaded} />
+              {/* Global UI — sits above the navigator so it's available from
+                  every screen via openFastLog() / showUndoSnackbar() in
+                  BudgetContext. */}
+              <FastLogSheet />
+              <UndoSnackbar />
+            </View>
+          </BudgetProvider>
+        </AppLockProvider>
       </ThemeProvider>
     </SafeAreaProvider>
   );
