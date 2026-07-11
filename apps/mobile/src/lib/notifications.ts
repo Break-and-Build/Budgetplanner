@@ -1,24 +1,23 @@
 /**
- * Notifications — local-only, opt-in.
+ * Notifications — local-only, on by default.
  *
  * Two scheduled reminders, both via `expo-notifications` (no server needed,
  * no push tokens, no Supabase dependency):
  *
- *   1. Daily 9am — "Today's budget" (taps open the app to Home)
- *   2. 28th of each month, 10am — "[Month] is winding down" (taps open MonthClose
- *      via a deep-link the splash/root navigator interprets)
+ *   1. Daily at a user-chosen time — "Today's budget" (taps open Home)
+ *   2. 28th of each month, 10am — "[Month] is winding down" (taps open MonthClose)
  *
  * Tone matches the brief — calm, factual, not preachy. No emoji, no streaks.
  *
- * The "enabled" preference lives in BudgetBlob.remindersEnabled and is the
- * single source of truth. Toggling it on requests OS permission and schedules;
- * toggling off cancels everything.
+ * Reminders are scheduled automatically once the OS grants permission; the only
+ * way to turn them off is the system notification settings. The daily time
+ * lives in BudgetBlob.reminderHour/reminderMinute.
  */
 
 import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
 
-/** Identifier for our daily 9am reminder. Used to find + cancel it. */
+/** Identifier for our daily reminder. Used to find + cancel it. */
 const DAILY_ID = 'budgetplanner.reminder.daily';
 /** Identifier for the 28th-of-month close-out reminder. */
 const MONTH_END_ID = 'budgetplanner.reminder.monthEnd';
@@ -56,11 +55,18 @@ export async function requestNotificationPermission(): Promise<boolean> {
   return next.status === 'granted';
 }
 
+/** True when notifications are currently permitted (does not prompt). */
+export async function getNotificationsGranted(): Promise<boolean> {
+  const existing = await Notifications.getPermissionsAsync();
+  return existing.status === 'granted';
+}
+
 /**
- * Cancel any existing reminder and schedule the daily 9am reminder fresh.
- * Idempotent — safe to call on every app launch (cheap, doesn't pile up).
+ * Cancel any existing reminder and schedule the daily reminder fresh at the
+ * given time. Idempotent — safe to call on every app launch (cheap, doesn't
+ * pile up).
  */
-export async function scheduleDailyReminder(): Promise<void> {
+export async function scheduleDailyReminder(hour: number, minute: number): Promise<void> {
   // Clean up any previous instance under this identifier.
   await Notifications.cancelScheduledNotificationAsync(DAILY_ID).catch(() => {});
   await Notifications.scheduleNotificationAsync({
@@ -78,28 +84,8 @@ export async function scheduleDailyReminder(): Promise<void> {
     // with partial date components for a plain daily reminder.
     trigger: {
       type: Notifications.SchedulableTriggerInputTypes.DAILY,
-      hour: 9,
-      minute: 0,
-    },
-  });
-}
-
-/**
- * Fire a one-off test notification a few seconds from now. Lets a user confirm
- * notifications actually work on their device without waiting until 9am.
- * Not tied to the daily/month-end schedule and never repeats.
- */
-export async function sendTestReminder(): Promise<void> {
-  await Notifications.scheduleNotificationAsync({
-    content: {
-      title: 'Test reminder',
-      body: "This is what your daily nudge looks like. You're all set.",
-      data: { type: 'test' },
-    },
-    trigger: {
-      type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
-      seconds: 5,
-      repeats: false,
+      hour,
+      minute,
     },
   });
 }
@@ -142,12 +128,13 @@ export async function cancelAllReminders(): Promise<void> {
 }
 
 /**
- * Schedule everything fresh. Called when the user enables reminders AND on
- * every app launch when they're already enabled (so notifications stay
- * scheduled even if the OS killed them — happens sometimes after reboot).
+ * Schedule everything fresh at the given daily time. Called on every app launch
+ * (once permission is granted) so notifications stay scheduled even if the OS
+ * dropped them — happens sometimes after reboot — and whenever the user changes
+ * the reminder time.
  */
-export async function scheduleAllReminders(): Promise<void> {
-  await scheduleDailyReminder();
+export async function scheduleAllReminders(hour: number, minute: number): Promise<void> {
+  await scheduleDailyReminder(hour, minute);
   await scheduleMonthEndReminder();
 }
 

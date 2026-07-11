@@ -169,14 +169,15 @@ export interface BudgetBlob {
   /** True once the user has completed setup at least once. Drives FirstRun gate. */
   setupComplete: boolean;
   /**
-   * Opt-in flag for the two local reminders (daily 9am + 28th-of-month). Off
-   * by default — respects the brief's "no preachy notifications" rule.
+   * Hour (0–23) and minute (0–59) for the daily reminder. Reminders are on by
+   * default once the OS grants permission; this only controls *when* they fire.
+   * Defaults to 20:00 (8pm) — an evening "log your day" nudge.
    */
+  reminderHour?: number;
+  reminderMinute?: number;
+  /** @deprecated Reminders are now on-by-default; kept only for old-blob parse. */
   remindersEnabled?: boolean;
-  /**
-   * True once the user has seen (and acted on or dismissed) the one-time Home
-   * nudge offering to turn reminders on. Keeps the nudge from re-appearing.
-   */
+  /** @deprecated No longer used — the reminders nudge was removed. */
   remindersPromptDismissed?: boolean;
   /**
    * True once the user has seen (or skipped) the first-run spotlight tour.

@@ -155,10 +155,9 @@ export function parseBudgetBlob(raw: unknown, now: Date = new Date()): BudgetBlo
       recurring: Array.isArray(v2.recurring) ? v2.recurring : [],
       setupStep: typeof v2.setupStep === 'number' ? v2.setupStep : undefined,
       setupComplete: !!v2.setupComplete,
-      // Same forward-compat dance for remindersEnabled.
-      remindersEnabled: typeof v2.remindersEnabled === 'boolean' ? v2.remindersEnabled : false,
-      remindersPromptDismissed:
-        typeof v2.remindersPromptDismissed === 'boolean' ? v2.remindersPromptDismissed : false,
+      // Daily reminder time — default 20:00 (8pm) when absent.
+      reminderHour: typeof v2.reminderHour === 'number' ? v2.reminderHour : 20,
+      reminderMinute: typeof v2.reminderMinute === 'number' ? v2.reminderMinute : 0,
       walkthroughSeen: typeof v2.walkthroughSeen === 'boolean' ? v2.walkthroughSeen : false,
     };
   }

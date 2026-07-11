@@ -10,15 +10,17 @@
  * the top-right dismisses the whole modal.
  */
 
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   Linking,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -29,9 +31,7 @@ import { useTokens } from '../theme/ThemeProvider';
 import { HeaderIconButton } from '../components/ScreenHeader';
 import { BottomSheet } from '../components/BottomSheet';
 import { Button } from '../components/ui/Button';
-import { Switch } from '../components/ui/Switch';
 import { useBudget } from '../state/BudgetContext';
-import { sendTestReminder } from '../lib/notifications';
 import type { RootStackParamList } from '../types/navigation';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
@@ -47,35 +47,26 @@ export function SettingsScreen() {
     blob,
     resetAll,
     resetCurrentMonth,
-    remindersEnabled,
-    setRemindersEnabled,
+    reminderHour,
+    reminderMinute,
+    setReminderTime,
+    notificationsGranted,
   } = useBudget();
   const [confirmAction, setConfirmAction] = useState<null | 'all' | 'month'>(null);
-  const [permissionDenied, setPermissionDenied] = useState(false);
-  const [testState, setTestState] = useState<'idle' | 'sent' | 'error'>('idle');
-  const [testError, setTestError] = useState<string | null>(null);
+  const [timePickerOpen, setTimePickerOpen] = useState(false);
 
   const currentCurrency = getCurrency(blob.currency);
 
-  const onToggleReminders = async (next: boolean) => {
-    const granted = await setRemindersEnabled(next);
-    // If the user wanted them on but the OS denied permission, surface the
-    // "enable in iOS Settings" hint inline.
-    setPermissionDenied(next && !granted);
-  };
-
-  // Never swallow the failure — if scheduling rejects, show why. A silent
-  // no-op here is exactly what made the broken `sound: null` so hard to spot.
-  const onSendTest = async () => {
-    try {
-      await sendTestReminder();
-      setTestState('sent');
-      setTestError(null);
-    } catch (e) {
-      setTestState('error');
-      setTestError(e instanceof Error ? e.message : String(e));
-    }
-  };
+  // A Date carrying just the reminder's hour/minute, for the picker.
+  const reminderDate = useMemo(() => {
+    const d = new Date();
+    d.setHours(reminderHour, reminderMinute, 0, 0);
+    return d;
+  }, [reminderHour, reminderMinute]);
+  const reminderLabel = reminderDate.toLocaleTimeString(undefined, {
+    hour: 'numeric',
+    minute: '2-digit',
+  });
 
   const onResetAll = async () => {
     await resetAll();
@@ -155,75 +146,44 @@ export function SettingsScreen() {
         {/* ─── Reminders ────────────────────────────────────────────────── */}
         <SectionLabel>Reminders</SectionLabel>
         <Card>
-          <View
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              paddingHorizontal: t.space[4],
-              paddingVertical: t.space[3],
-              minHeight: 56,
-            }}
-            accessibilityLabel="Daily and month-end reminders toggle"
-          >
-            <View style={{ flex: 1, paddingRight: t.space[3] }}>
-              <Text
-                allowFontScaling
-                maxFontSizeMultiplier={t.a11y.maxFontScale}
-                style={[t.type.body, { color: t.color.text.primary }]}
-              >
-                Daily and month-end
-              </Text>
-              <Text
-                allowFontScaling
-                maxFontSizeMultiplier={t.a11y.maxFontScale}
-                style={[
-                  t.type.footnote,
-                  { color: t.color.text.secondary, marginTop: 2 },
-                ]}
-              >
-                A calm nudge at 9am, plus a reminder on the 28th to close out
-                the month.
-              </Text>
-            </View>
-            <Switch
-              value={remindersEnabled}
-              onValueChange={onToggleReminders}
-              accessibilityLabel="Toggle reminders"
-            />
-          </View>
-          {remindersEnabled ? (
-            <>
-              <Divider />
-              <Row
-                label="Send a test reminder"
-                sublabel={
-                  testState === 'sent'
-                    ? 'Sent — it arrives in about 5 seconds.'
-                    : testState === 'error'
-                      ? `Couldn't schedule: ${testError}`
-                      : 'Check notifications work on this device.'
-                }
-                onPress={onSendTest}
-                destructive={testState === 'error'}
+          <Row
+            label="Daily reminder"
+            sublabel="A calm nudge to log the day, plus a reminder on the 28th to close out the month."
+            value={reminderLabel}
+            onPress={() => setTimePickerOpen((o) => !o)}
+          />
+          {timePickerOpen ? (
+            <View style={{ paddingHorizontal: t.space[4], paddingBottom: t.space[3] }}>
+              <DateTimePicker
+                value={reminderDate}
+                mode="time"
+                display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                onChange={(event, selected) => {
+                  if (Platform.OS === 'android') setTimePickerOpen(false);
+                  if (event.type === 'set' && selected) {
+                    setReminderTime(selected.getHours(), selected.getMinutes());
+                  }
+                }}
+                style={{ alignSelf: 'flex-start' }}
               />
-            </>
+            </View>
           ) : null}
         </Card>
-        {permissionDenied ? (
+        {!notificationsGranted ? (
           <Text
             allowFontScaling
             maxFontSizeMultiplier={t.a11y.maxFontScale}
             style={[
               t.type.caption1,
               {
-                color: t.color.status.overBudget,
+                color: t.color.text.secondary,
                 paddingHorizontal: t.space[5],
                 paddingTop: t.space[2],
               },
             ]}
           >
-            Notifications are blocked. Enable Budget Tracker in your device
-            Settings to turn reminders on.
+            Notifications are turned off. Enable them for Budget Tracker in your
+            device Settings to get reminders.
           </Text>
         ) : null}
 

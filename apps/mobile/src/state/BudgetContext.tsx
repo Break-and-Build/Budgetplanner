@@ -19,7 +19,7 @@
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
-  cancelAllReminders,
+  getNotificationsGranted,
   requestNotificationPermission,
   scheduleAllReminders,
 } from '../lib/notifications';
@@ -114,18 +114,14 @@ interface BudgetContextValue {
   updateRecurring: (id: string, patch: Partial<RecurringTransaction>) => void;
   removeRecurring: (id: string) => void;
 
-  // ─── Reminders (local notifications) ──────────────────────────────────────
-  remindersEnabled: boolean;
-  /**
-   * Turn reminders on or off. Enabling requests OS permission first; if the
-   * user denies, the toggle stays off. Returns the resulting state so the
-   * UI can bounce-back if permission was denied.
-   */
-  setRemindersEnabled: (next: boolean) => Promise<boolean>;
-  /** True once the one-time "turn on reminders?" Home nudge has been resolved. */
-  remindersPromptDismissed: boolean;
-  /** Mark the reminders nudge resolved so it never shows again. */
-  dismissRemindersPrompt: () => void;
+  // ─── Reminders (local notifications, on by default) ───────────────────────
+  /** Daily reminder time. Reminders fire automatically once the OS permits. */
+  reminderHour: number;
+  reminderMinute: number;
+  /** Change the daily reminder time (0–23h, 0–59m) and reschedule. */
+  setReminderTime: (hour: number, minute: number) => void;
+  /** True when the OS currently permits notifications (drives the Settings hint). */
+  notificationsGranted: boolean;
 
   // ─── Month close ──────────────────────────────────────────────────────────
   /**
@@ -405,44 +401,42 @@ export function BudgetProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   // ─── Reminders ────────────────────────────────────────────────────────────
-  const setRemindersEnabled = useCallback(async (next: boolean): Promise<boolean> => {
-    if (next) {
-      // Ask the OS for permission first. If denied, the toggle stays off and
-      // we don't schedule anything. The UI bounces the switch back.
-      const granted = await requestNotificationPermission();
-      if (!granted) {
-        setBlob((prev) => ({ ...prev, remindersEnabled: false }));
-        return false;
-      }
-      // Don't claim success if scheduling actually failed — that would leave
-      // the toggle "on" while no notification is ever registered with the OS.
-      try {
-        await scheduleAllReminders();
-      } catch (e) {
-        console.warn('[reminders] failed to schedule:', e);
-        setBlob((prev) => ({ ...prev, remindersEnabled: false }));
-        return false;
-      }
-      setBlob((prev) => ({ ...prev, remindersEnabled: true }));
-      return true;
-    }
-    await cancelAllReminders().catch(() => {});
-    setBlob((prev) => ({ ...prev, remindersEnabled: false }));
-    return false;
-  }, []);
+  const reminderHour = typeof blob.reminderHour === 'number' ? blob.reminderHour : 20;
+  const reminderMinute = typeof blob.reminderMinute === 'number' ? blob.reminderMinute : 0;
+  const [notificationsGranted, setNotificationsGranted] = useState(false);
 
-  const dismissRemindersPrompt = useCallback(() => {
-    setBlob((prev) => ({ ...prev, remindersPromptDismissed: true }));
-  }, []);
+  const setReminderTime = useCallback(
+    (hour: number, minute: number) => {
+      setBlob((prev) => ({ ...prev, reminderHour: hour, reminderMinute: minute }));
+      // Reschedule immediately at the new time (best-effort; the launch effect
+      // also covers this, but this makes the change feel instant).
+      getNotificationsGranted().then((granted) => {
+        if (granted) scheduleAllReminders(hour, minute).catch(() => {});
+      });
+    },
+    [],
+  );
 
-  // Re-schedule on every app launch when reminders are enabled — the OS can
-  // drop scheduled notifications after device reboots or app updates.
+  // Reminders are on by default. Once setup is done, request permission (once)
+  // and schedule at the chosen time — and re-schedule on every launch and time
+  // change, since the OS can drop scheduled notifications after reboots/updates.
   useEffect(() => {
-    if (!isHydrated || !blob.remindersEnabled) return;
-    scheduleAllReminders().catch((e) => {
-      console.warn('[reminders] re-schedule on launch failed:', e);
-    });
-  }, [isHydrated, blob.remindersEnabled]);
+    if (!isHydrated || !blob.setupComplete) return;
+    let cancelled = false;
+    (async () => {
+      const granted = await requestNotificationPermission().catch(() => false);
+      if (cancelled) return;
+      setNotificationsGranted(granted);
+      if (granted) {
+        await scheduleAllReminders(reminderHour, reminderMinute).catch((e) => {
+          console.warn('[reminders] schedule on launch failed:', e);
+        });
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [isHydrated, blob.setupComplete, reminderHour, reminderMinute]);
 
   // ─── Month close ──────────────────────────────────────────────────────────
   const [monthCloseBannerDismissed, setBannerDismissed] = useState(false);
@@ -504,10 +498,10 @@ export function BudgetProvider({ children }: { children: React.ReactNode }) {
       addRecurring,
       updateRecurring,
       removeRecurring,
-      remindersEnabled: !!blob.remindersEnabled,
-      setRemindersEnabled,
-      remindersPromptDismissed: !!blob.remindersPromptDismissed,
-      dismissRemindersPrompt,
+      reminderHour,
+      reminderMinute,
+      setReminderTime,
+      notificationsGranted,
       closeMonth,
       monthCloseBannerDismissed,
       dismissMonthCloseBanner,
@@ -539,8 +533,10 @@ export function BudgetProvider({ children }: { children: React.ReactNode }) {
       addRecurring,
       updateRecurring,
       removeRecurring,
-      setRemindersEnabled,
-      dismissRemindersPrompt,
+      reminderHour,
+      reminderMinute,
+      setReminderTime,
+      notificationsGranted,
       closeMonth,
       monthCloseBannerDismissed,
       dismissMonthCloseBanner,
