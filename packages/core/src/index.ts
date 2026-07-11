@@ -12,6 +12,7 @@ export type {
   // v2 tracking types
   CategoryId,
   CategoryDef,
+  ReminderTime,
   Transaction,
   BudgetPlan,
   MonthState,
@@ -66,3 +67,10 @@ export {
 
 // Recurring transaction rules
 export { shouldFireRule, materializeRule, runRecurringRules } from './recurring';
+
+// Reminder-time helpers
+export {
+  MAX_REMINDER_TIMES,
+  defaultReminderTimes,
+  normalizeReminderTimes,
+} from './reminders';

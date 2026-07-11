@@ -40,6 +40,7 @@ import type {
   MonthState,
   RecurringTransaction,
   ReflectionData,
+  ReminderTime,
   Transaction,
 } from '@budgetplanner/core';
 import {
@@ -54,6 +55,8 @@ import {
   newCategoryId,
   nextPaletteColor,
   normalizeCategoryPercents,
+  defaultReminderTimes,
+  normalizeReminderTimes,
 } from '@budgetplanner/core';
 
 /** Stable AsyncStorage key for the v2 blob. */
@@ -115,11 +118,10 @@ interface BudgetContextValue {
   removeRecurring: (id: string) => void;
 
   // ─── Reminders (local notifications, on by default) ───────────────────────
-  /** Daily reminder time. Reminders fire automatically once the OS permits. */
-  reminderHour: number;
-  reminderMinute: number;
-  /** Change the daily reminder time (0–23h, 0–59m) and reschedule. */
-  setReminderTime: (hour: number, minute: number) => void;
+  /** Daily reminder times. Reminders fire automatically once the OS permits. */
+  reminderTimes: ReminderTime[];
+  /** Replace the reminder times (normalised + rescheduled). */
+  setReminderTimes: (times: ReminderTime[]) => void;
   /** True when the OS currently permits notifications (drives the Settings hint). */
   notificationsGranted: boolean;
 
@@ -401,24 +403,24 @@ export function BudgetProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   // ─── Reminders ────────────────────────────────────────────────────────────
-  const reminderHour = typeof blob.reminderHour === 'number' ? blob.reminderHour : 20;
-  const reminderMinute = typeof blob.reminderMinute === 'number' ? blob.reminderMinute : 0;
+  const reminderTimes = useMemo(
+    () => normalizeReminderTimes(blob.reminderTimes ?? defaultReminderTimes()),
+    [blob.reminderTimes],
+  );
   const [notificationsGranted, setNotificationsGranted] = useState(false);
 
-  const setReminderTime = useCallback(
-    (hour: number, minute: number) => {
-      setBlob((prev) => ({ ...prev, reminderHour: hour, reminderMinute: minute }));
-      // Reschedule immediately at the new time (best-effort; the launch effect
-      // also covers this, but this makes the change feel instant).
-      getNotificationsGranted().then((granted) => {
-        if (granted) scheduleAllReminders(hour, minute).catch(() => {});
-      });
-    },
-    [],
-  );
+  const setReminderTimes = useCallback((times: ReminderTime[]) => {
+    const normalized = normalizeReminderTimes(times);
+    setBlob((prev) => ({ ...prev, reminderTimes: normalized }));
+    // Reschedule immediately (best-effort; the launch effect also covers this,
+    // but this makes the change feel instant).
+    getNotificationsGranted().then((granted) => {
+      if (granted) scheduleAllReminders(normalized).catch(() => {});
+    });
+  }, []);
 
   // Reminders are on by default. Once setup is done, request permission (once)
-  // and schedule at the chosen time — and re-schedule on every launch and time
+  // and schedule at the chosen times — and re-schedule on every launch and time
   // change, since the OS can drop scheduled notifications after reboots/updates.
   useEffect(() => {
     if (!isHydrated || !blob.setupComplete) return;
@@ -428,7 +430,7 @@ export function BudgetProvider({ children }: { children: React.ReactNode }) {
       if (cancelled) return;
       setNotificationsGranted(granted);
       if (granted) {
-        await scheduleAllReminders(reminderHour, reminderMinute).catch((e) => {
+        await scheduleAllReminders(reminderTimes).catch((e) => {
           console.warn('[reminders] schedule on launch failed:', e);
         });
       }
@@ -436,7 +438,7 @@ export function BudgetProvider({ children }: { children: React.ReactNode }) {
     return () => {
       cancelled = true;
     };
-  }, [isHydrated, blob.setupComplete, reminderHour, reminderMinute]);
+  }, [isHydrated, blob.setupComplete, reminderTimes]);
 
   // ─── Month close ──────────────────────────────────────────────────────────
   const [monthCloseBannerDismissed, setBannerDismissed] = useState(false);
@@ -498,9 +500,8 @@ export function BudgetProvider({ children }: { children: React.ReactNode }) {
       addRecurring,
       updateRecurring,
       removeRecurring,
-      reminderHour,
-      reminderMinute,
-      setReminderTime,
+      reminderTimes,
+      setReminderTimes,
       notificationsGranted,
       closeMonth,
       monthCloseBannerDismissed,
@@ -533,9 +534,8 @@ export function BudgetProvider({ children }: { children: React.ReactNode }) {
       addRecurring,
       updateRecurring,
       removeRecurring,
-      reminderHour,
-      reminderMinute,
-      setReminderTime,
+      reminderTimes,
+      setReminderTimes,
       notificationsGranted,
       closeMonth,
       monthCloseBannerDismissed,

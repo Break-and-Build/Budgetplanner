@@ -10,7 +10,7 @@
  * the top-right dismisses the whole modal.
  */
 
-import React, { useMemo, useState } from 'react';
+import React, { useState } from 'react';
 import {
   Linking,
   Platform,
@@ -24,8 +24,9 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { ChevronRight, X } from 'lucide-react-native';
-import { getCurrency } from '@budgetplanner/core';
+import { ChevronRight, Trash2, X } from 'lucide-react-native';
+import { getCurrency, MAX_REMINDER_TIMES } from '@budgetplanner/core';
+import type { ReminderTime } from '@budgetplanner/core';
 
 import { useTokens } from '../theme/ThemeProvider';
 import { HeaderIconButton } from '../components/ScreenHeader';
@@ -47,26 +48,40 @@ export function SettingsScreen() {
     blob,
     resetAll,
     resetCurrentMonth,
-    reminderHour,
-    reminderMinute,
-    setReminderTime,
+    reminderTimes,
+    setReminderTimes,
     notificationsGranted,
   } = useBudget();
   const [confirmAction, setConfirmAction] = useState<null | 'all' | 'month'>(null);
-  const [timePickerOpen, setTimePickerOpen] = useState(false);
+  // Which reminder-time row has its picker open (index), or null.
+  const [editingTime, setEditingTime] = useState<number | null>(null);
 
   const currentCurrency = getCurrency(blob.currency);
 
-  // A Date carrying just the reminder's hour/minute, for the picker.
-  const reminderDate = useMemo(() => {
+  const dateForTime = (ti: ReminderTime) => {
     const d = new Date();
-    d.setHours(reminderHour, reminderMinute, 0, 0);
+    d.setHours(ti.hour, ti.minute, 0, 0);
     return d;
-  }, [reminderHour, reminderMinute]);
-  const reminderLabel = reminderDate.toLocaleTimeString(undefined, {
-    hour: 'numeric',
-    minute: '2-digit',
-  });
+  };
+  const labelForTime = (ti: ReminderTime) =>
+    dateForTime(ti).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+
+  const updateTimeAt = (index: number, date: Date) => {
+    setReminderTimes(
+      reminderTimes.map((t, i) =>
+        i === index ? { hour: date.getHours(), minute: date.getMinutes() } : t,
+      ),
+    );
+  };
+  const removeTimeAt = (index: number) => {
+    setEditingTime(null);
+    setReminderTimes(reminderTimes.filter((_, i) => i !== index));
+  };
+  const addTime = () => {
+    const next = [...reminderTimes, { hour: 9, minute: 0 }];
+    setReminderTimes(next);
+    setEditingTime(next.length - 1);
+  };
 
   const onResetAll = async () => {
     await resetAll();
@@ -144,48 +159,85 @@ export function SettingsScreen() {
         </Card>
 
         {/* ─── Reminders ────────────────────────────────────────────────── */}
-        <SectionLabel>Reminders</SectionLabel>
+        <SectionLabel>Daily reminders</SectionLabel>
         <Card>
-          <Row
-            label="Daily reminder"
-            sublabel="A calm nudge to log the day, plus a reminder on the 28th to close out the month."
-            value={reminderLabel}
-            onPress={() => setTimePickerOpen((o) => !o)}
-          />
-          {timePickerOpen ? (
-            <View style={{ paddingHorizontal: t.space[4], paddingBottom: t.space[3] }}>
-              <DateTimePicker
-                value={reminderDate}
-                mode="time"
-                display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-                onChange={(event, selected) => {
-                  if (Platform.OS === 'android') setTimePickerOpen(false);
-                  if (event.type === 'set' && selected) {
-                    setReminderTime(selected.getHours(), selected.getMinutes());
-                  }
+          {reminderTimes.map((ti, index) => (
+            <View key={index}>
+              {index > 0 ? <Divider /> : null}
+              <View
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  paddingHorizontal: t.space[4],
+                  paddingVertical: t.space[3],
+                  minHeight: 56,
                 }}
-                style={{ alignSelf: 'flex-start' }}
-              />
+              >
+                <Pressable
+                  onPress={() => setEditingTime(editingTime === index ? null : index)}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Reminder at ${labelForTime(ti)}. Edit time.`}
+                  style={{ flex: 1 }}
+                >
+                  <Text
+                    allowFontScaling
+                    maxFontSizeMultiplier={t.a11y.maxFontScale}
+                    style={[t.type.body, { color: t.color.text.primary }]}
+                  >
+                    {labelForTime(ti)}
+                  </Text>
+                </Pressable>
+                {reminderTimes.length > 1 ? (
+                  <Pressable
+                    onPress={() => removeTimeAt(index)}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Remove reminder at ${labelForTime(ti)}`}
+                    hitSlop={8}
+                    style={({ pressed }) => ({ padding: t.space[1], opacity: pressed ? 0.5 : 1 })}
+                  >
+                    <Trash2 size={18} color={t.color.text.tertiary} strokeWidth={1.75} />
+                  </Pressable>
+                ) : null}
+              </View>
+              {editingTime === index ? (
+                <View style={{ paddingHorizontal: t.space[4], paddingBottom: t.space[3] }}>
+                  <DateTimePicker
+                    value={dateForTime(ti)}
+                    mode="time"
+                    display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                    onChange={(event, selected) => {
+                      if (Platform.OS === 'android') setEditingTime(null);
+                      if (event.type === 'set' && selected) updateTimeAt(index, selected);
+                    }}
+                    style={{ alignSelf: 'flex-start' }}
+                  />
+                </View>
+              ) : null}
             </View>
+          ))}
+          {reminderTimes.length < MAX_REMINDER_TIMES ? (
+            <>
+              <Divider />
+              <Row label="Add a time" onPress={addTime} />
+            </>
           ) : null}
         </Card>
-        {!notificationsGranted ? (
-          <Text
-            allowFontScaling
-            maxFontSizeMultiplier={t.a11y.maxFontScale}
-            style={[
-              t.type.caption1,
-              {
-                color: t.color.text.secondary,
-                paddingHorizontal: t.space[5],
-                paddingTop: t.space[2],
-              },
-            ]}
-          >
-            Notifications are turned off. Enable them for Budget Tracker in your
-            device Settings to get reminders.
-          </Text>
-        ) : null}
+        <Text
+          allowFontScaling
+          maxFontSizeMultiplier={t.a11y.maxFontScale}
+          style={[
+            t.type.caption1,
+            {
+              color: t.color.text.secondary,
+              paddingHorizontal: t.space[5],
+              paddingTop: t.space[2],
+            },
+          ]}
+        >
+          {notificationsGranted
+            ? 'Add up to five times a day — morning, midday, evening. Plus a reminder on the 28th to close out the month. Turn reminders off in your device Settings.'
+            : 'Notifications are turned off. Enable them for Budget Tracker in your device Settings to get reminders.'}
+        </Text>
 
         {/* ─── Reset ────────────────────────────────────────────────────── */}
         <SectionLabel>Reset</SectionLabel>

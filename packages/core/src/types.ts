@@ -80,6 +80,12 @@ export interface CategoryDef {
   percent: number;
 }
 
+/** A time of day (24h) for a daily reminder. */
+export interface ReminderTime {
+  hour: number;
+  minute: number;
+}
+
 /**
  * A single logged spend. Money only — income is captured per-month in `plan`.
  * `monthKey` is the YYYY-MM the transaction is bucketed under (independent of
@@ -169,11 +175,14 @@ export interface BudgetBlob {
   /** True once the user has completed setup at least once. Drives FirstRun gate. */
   setupComplete: boolean;
   /**
-   * Hour (0–23) and minute (0–59) for the daily reminder. Reminders are on by
-   * default once the OS grants permission; this only controls *when* they fire.
-   * Defaults to 20:00 (8pm) — an evening "log your day" nudge.
+   * The daily reminder times. Reminders are on by default once the OS grants
+   * permission; this controls *when* they fire. Each entry schedules its own
+   * repeating daily notification. Defaults to a single 20:00 (8pm) nudge.
    */
+  reminderTimes?: ReminderTime[];
+  /** @deprecated Single-time model — migrated into `reminderTimes`. */
   reminderHour?: number;
+  /** @deprecated Single-time model — migrated into `reminderTimes`. */
   reminderMinute?: number;
   /** @deprecated Reminders are now on-by-default; kept only for old-blob parse. */
   remindersEnabled?: boolean;

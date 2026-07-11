@@ -21,6 +21,7 @@ import type {
   SplitPlan,
 } from './types';
 import { categoriesFromSplit, defaultCategories } from './categories';
+import { defaultReminderTimes, normalizeReminderTimes } from './reminders';
 
 // React Native injects this at build time. In other environments it's
 // undefined and the self-checks at the bottom are skipped.
@@ -155,9 +156,13 @@ export function parseBudgetBlob(raw: unknown, now: Date = new Date()): BudgetBlo
       recurring: Array.isArray(v2.recurring) ? v2.recurring : [],
       setupStep: typeof v2.setupStep === 'number' ? v2.setupStep : undefined,
       setupComplete: !!v2.setupComplete,
-      // Daily reminder time — default 20:00 (8pm) when absent.
-      reminderHour: typeof v2.reminderHour === 'number' ? v2.reminderHour : 20,
-      reminderMinute: typeof v2.reminderMinute === 'number' ? v2.reminderMinute : 0,
+      // Daily reminder times. Prefer the new array; fall back to the old
+      // single-time fields; else default to one 20:00 (8pm) nudge.
+      reminderTimes: Array.isArray(v2.reminderTimes)
+        ? normalizeReminderTimes(v2.reminderTimes)
+        : typeof v2.reminderHour === 'number'
+          ? normalizeReminderTimes([{ hour: v2.reminderHour, minute: v2.reminderMinute ?? 0 }])
+          : defaultReminderTimes(),
       walkthroughSeen: typeof v2.walkthroughSeen === 'boolean' ? v2.walkthroughSeen : false,
     };
   }

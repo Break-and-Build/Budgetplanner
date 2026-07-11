@@ -16,9 +16,10 @@
 
 import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
+import type { ReminderTime } from '@budgetplanner/core';
 
-/** Identifier for our daily reminder. Used to find + cancel it. */
-const DAILY_ID = 'budgetplanner.reminder.daily';
+/** Identifier prefix for our daily reminders (one per configured time). */
+const DAILY_PREFIX = 'budgetplanner.reminder.daily';
 /** Identifier for the 28th-of-month close-out reminder. */
 const MONTH_END_ID = 'budgetplanner.reminder.monthEnd';
 
@@ -61,33 +62,44 @@ export async function getNotificationsGranted(): Promise<boolean> {
   return existing.status === 'granted';
 }
 
+/** Cancel every scheduled daily reminder (there is one per configured time). */
+async function cancelDailyReminders(): Promise<void> {
+  const all = await Notifications.getAllScheduledNotificationsAsync().catch(() => []);
+  await Promise.all(
+    all
+      .filter((n) => (n.identifier ?? '').startsWith(DAILY_PREFIX))
+      .map((n) => Notifications.cancelScheduledNotificationAsync(n.identifier).catch(() => {})),
+  );
+}
+
 /**
- * Cancel any existing reminder and schedule the daily reminder fresh at the
- * given time. Idempotent — safe to call on every app launch (cheap, doesn't
- * pile up).
+ * Cancel existing daily reminders and schedule one repeating notification per
+ * configured time. Idempotent — safe to call on every app launch and whenever
+ * the times change.
  */
-export async function scheduleDailyReminder(hour: number, minute: number): Promise<void> {
-  // Clean up any previous instance under this identifier.
-  await Notifications.cancelScheduledNotificationAsync(DAILY_ID).catch(() => {});
-  await Notifications.scheduleNotificationAsync({
-    identifier: DAILY_ID,
-    content: {
-      // NOTE: never pass `sound: null` — the native module expects
-      // `boolean | string`, and null makes scheduleNotificationAsync reject.
-      // Omitting `sound` is what gives us a silent notification on iOS.
-      title: "Today's budget",
-      body: 'Tap to log the day and see what you have left to spend.',
-      data: { type: 'daily' },
-    },
-    // DAILY is the purpose-built "every day at HH:MM" trigger. It repeats on
-    // its own (no `repeats` flag), and is more reliable than a CALENDAR trigger
-    // with partial date components for a plain daily reminder.
-    trigger: {
-      type: Notifications.SchedulableTriggerInputTypes.DAILY,
-      hour,
-      minute,
-    },
-  });
+export async function scheduleDailyReminders(times: ReminderTime[]): Promise<void> {
+  await cancelDailyReminders();
+  for (let i = 0; i < times.length; i++) {
+    const { hour, minute } = times[i];
+    await Notifications.scheduleNotificationAsync({
+      identifier: `${DAILY_PREFIX}.${i}`,
+      content: {
+        // NOTE: never pass `sound: null` — the native module expects
+        // `boolean | string`, and null makes scheduleNotificationAsync reject.
+        // Omitting `sound` is what gives us a silent notification on iOS.
+        title: "Today's budget",
+        body: 'Tap to log the day and see what you have left to spend.',
+        data: { type: 'daily' },
+      },
+      // DAILY is the purpose-built "every day at HH:MM" trigger. It repeats on
+      // its own (no `repeats` flag).
+      trigger: {
+        type: Notifications.SchedulableTriggerInputTypes.DAILY,
+        hour,
+        minute,
+      },
+    });
+  }
 }
 
 /**
@@ -121,20 +133,14 @@ export async function scheduleMonthEndReminder(): Promise<void> {
   });
 }
 
-/** Cancel both scheduled reminders. Safe to call when nothing is scheduled. */
-export async function cancelAllReminders(): Promise<void> {
-  await Notifications.cancelScheduledNotificationAsync(DAILY_ID).catch(() => {});
-  await Notifications.cancelScheduledNotificationAsync(MONTH_END_ID).catch(() => {});
-}
-
 /**
- * Schedule everything fresh at the given daily time. Called on every app launch
+ * Schedule everything fresh at the given daily times. Called on every app launch
  * (once permission is granted) so notifications stay scheduled even if the OS
  * dropped them — happens sometimes after reboot — and whenever the user changes
- * the reminder time.
+ * the reminder times.
  */
-export async function scheduleAllReminders(hour: number, minute: number): Promise<void> {
-  await scheduleDailyReminder(hour, minute);
+export async function scheduleAllReminders(times: ReminderTime[]): Promise<void> {
+  await scheduleDailyReminders(times);
   await scheduleMonthEndReminder();
 }
 
