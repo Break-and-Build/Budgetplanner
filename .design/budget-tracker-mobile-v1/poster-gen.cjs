@@ -57,13 +57,13 @@ function homeMarkup(withFab) {
         <div class="hero"><span class="hero-sym">₦</span>3,403</div>
         <div class="hero-sub">15 days to go this month</div>
         <div class="card">
-          ${catRow('Essentials', C.ess, C.essT, '₦75,424', 56)}
+          ${catRow('Needs', C.ess, C.essT, '₦75,424', 56)}
           <div class="divider"></div>
-          ${catRow('Growth', C.gro, C.groT, '₦52,813', 41)}
+          ${catRow('Wants', C.gro, C.groT, '₦52,813', 41)}
           <div class="divider"></div>
-          ${catRow('Stability', C.sta, C.staT, '₦29,888', 30)}
+          ${catRow('Savings', C.sta, C.staT, '₦29,888', 30)}
           <div class="divider"></div>
-          ${catRow('Rewards', C.rew, C.rewT, '₦17,425', 66)}
+          ${catRow('Fun', C.rew, C.rewT, '₦17,425', 66)}
         </div>
         <div class="card mini">
           <div class="mini-top"><span class="mini-eye">THIS MONTH</span><span class="mini-r">₦123,000 of ₦180,000</span></div>
@@ -98,9 +98,9 @@ const screens = {
         <div class="log-amt"><span class="log-sym">₦</span>1,200<span class="caret"></span></div>
         <div class="log-label">CATEGORY</div>
         <div class="chips">
-          <span class="chip sel"><span class="dot" style="background:#fff"></span>Essentials</span>
-          <span class="chip"><span class="dot" style="background:${C.gro}"></span>Growth</span>
-          <span class="chip"><span class="dot" style="background:${C.sta}"></span>Stability</span>
+          <span class="chip sel"><span class="dot" style="background:#fff"></span>Needs</span>
+          <span class="chip"><span class="dot" style="background:${C.gro}"></span>Wants</span>
+          <span class="chip"><span class="dot" style="background:${C.sta}"></span>Savings</span>
         </div>
         <div class="log-label">NOTE (OPTIONAL)</div>
         <div class="note">Lunch with the team</div>
@@ -127,13 +127,13 @@ const screens = {
         </div>
         <div class="scr-h2">Your split</div>
         <div class="card tight">
-          ${catRow('Essentials · 50%', C.ess, C.essT, '₦28,500', 50)}
+          ${catRow('Needs · 50%', C.ess, C.essT, '₦28,500', 50)}
           <div class="divider"></div>
-          ${catRow('Growth · 25%', C.gro, C.groT, '₦14,250', 25)}
+          ${catRow('Wants · 25%', C.gro, C.groT, '₦14,250', 25)}
           <div class="divider"></div>
-          ${catRow('Stability · 15%', C.sta, C.staT, '₦8,550', 15)}
+          ${catRow('Savings · 15%', C.sta, C.staT, '₦8,550', 15)}
           <div class="divider"></div>
-          ${catRow('Rewards · 10%', C.rew, C.rewT, '₦5,700', 10)}
+          ${catRow('Fun · 10%', C.rew, C.rewT, '₦5,700', 10)}
         </div>
       </div>`
   },
@@ -150,45 +150,64 @@ const screens = {
           <div class="day-total">₦25,200</div>
         </div>
         <div class="card list">
-          ${txn('Coffee', 'Essentials', C.ess, '₦1,200', '8:12 AM')}
+          ${txn('Coffee', 'Needs', C.ess, '₦1,200', '8:12 AM')}
           <div class="divider"></div>
-          ${txn('Bolt ride', 'Essentials', C.ess, '₦3,500', '9:40 AM')}
+          ${txn('Bolt ride', 'Needs', C.ess, '₦3,500', '9:40 AM')}
           <div class="divider"></div>
-          ${txn('Gym membership', 'Growth', C.gro, '₦8,000', '1:05 PM')}
+          ${txn('Gym membership', 'Wants', C.gro, '₦8,000', '1:05 PM')}
           <div class="divider"></div>
-          ${txn('Groceries', 'Essentials', C.ess, '₦6,200', '6:22 PM')}
+          ${txn('Groceries', 'Needs', C.ess, '₦6,200', '6:22 PM')}
           <div class="divider"></div>
-          ${txn('Dinner out', 'Rewards', C.rew, '₦4,300', '8:05 PM')}
+          ${txn('Dinner out', 'Fun', C.rew, '₦4,300', '8:05 PM')}
           <div class="divider"></div>
-          ${txn('Airtime', 'Stability', C.sta, '₦2,000', '9:18 PM')}
+          ${txn('Airtime', 'Savings', C.sta, '₦2,000', '9:18 PM')}
         </div>
         <div class="fab">+</div>
       </div>`
   },
 
   reminders: {
-    cap: `Gentle nudges, <span class="hl">never nagging</span>`,
-    sub: `A quiet reminder to check in — on your terms.`,
+    cap: `Nudges at <span class="hl">your</span> times`,
+    sub: `Morning, midday, evening — up to five a day.`,
     bg: ['#EEEBF4', '#F8F6FB'], blob: '#DED7EC',
     body: `
       ${statusbar}
       <div class="screen-pad">
-        <div class="scr-h1">Reminders</div>
+        <div class="scr-h1">Daily reminders</div>
         <div class="card tight">
-          <div class="rrow">
-            <div class="rtext"><div class="rt">Daily check-in</div><div class="rs">A nudge at 8:00 PM to log the day</div></div>
-            <div class="toggle on"><div class="knob"></div></div>
-          </div>
+          <div class="prow"><span class="pl">8:00 AM</span><span class="pv">✕</span></div>
           <div class="divider"></div>
-          <div class="rrow">
-            <div class="rtext"><div class="rt">Month-end reminder</div><div class="rs">We'll remind you to close out the month</div></div>
-            <div class="toggle on"><div class="knob"></div></div>
-          </div>
+          <div class="prow"><span class="pl">1:00 PM</span><span class="pv">✕</span></div>
+          <div class="divider"></div>
+          <div class="prow"><span class="pl">8:00 PM</span><span class="pv">✕</span></div>
+          <div class="divider"></div>
+          <div class="prow"><span class="pl brand-link">Add a time</span><span class="pv">›</span></div>
         </div>
         <div class="notif-card">
           <div class="notif-ico">₦</div>
-          <div class="notif-txt"><div class="nt">Budget Tracker</div><div class="ns">You have ₦3,403 safe to spend today 💜</div></div>
+          <div class="notif-txt"><div class="nt">Budget Tracker</div><div class="ns">Tap to log the day and see what you have left.</div></div>
           <div class="notif-time">now</div>
+        </div>
+      </div>`
+  },
+
+  lock: {
+    cap: `Locked, and <span class="hl">private</span>`,
+    sub: `A PIN or Face ID to open — and hide figures any time.`,
+    bg: ['#E9EAF0', '#F7F8FB'], blob: '#D6D8E4',
+    body: `
+      ${statusbar}
+      <div class="lock-wrap">
+        <div class="lock-mark"></div>
+        <div class="lock-title">Budget Tracker</div>
+        <div class="lock-sub">Enter your PIN to unlock</div>
+        <div class="lock-dots">
+          <span class="ldot filled"></span><span class="ldot filled"></span>
+          <span class="ldot"></span><span class="ldot"></span>
+        </div>
+        <div class="keypad">
+          ${[1, 2, 3, 4, 5, 6, 7, 8, 9].map((n) => `<div class="key">${n}</div>`).join('')}
+          <div class="key face">☺</div><div class="key">0</div><div class="key">⌫</div>
         </div>
       </div>`
   },
@@ -202,7 +221,7 @@ function txn(name, cat, color, amt, time) {
   </div>`;
 }
 
-const order = ['home', 'log', 'plan', 'today', 'reminders'];
+const order = ['home', 'log', 'plan', 'today', 'reminders', 'lock'];
 const posters = order.map(k => {
   const s = screens[k];
   return `<div class="poster" data-key="${k}" style="--bg1:${s.bg[0]};--bg2:${s.bg[1]};--blob:${s.blob}">
@@ -313,6 +332,20 @@ html,body{overflow:hidden;background:#fff}
 .txn-name{font-weight:600;font-size:16px;color:${C.ink}}
 .txn-cat{font-weight:400;font-size:13px;color:${C.sec};margin-top:2px}
 .txn-amt{font-weight:600;font-size:16px;color:${C.ink}}
+
+/* lock screen */
+.brand-link{color:${C.brand};font-weight:600}
+.lock-wrap{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;padding-bottom:40px}
+.lock-mark{width:56px;height:56px;border-radius:14px;background:${C.brand};margin-bottom:18px;
+  background-image:linear-gradient(135deg,${C.brand},${C.brandPress})}
+.lock-title{font-weight:700;font-size:22px;color:${C.ink};letter-spacing:-.4px}
+.lock-sub{font-weight:400;font-size:14px;color:${C.sec};margin-top:6px}
+.lock-dots{display:flex;gap:16px;margin:30px 0 34px}
+.ldot{width:13px;height:13px;border-radius:50%;border:1.5px solid ${C.ink}}
+.ldot.filled{background:${C.ink}}
+.keypad{display:grid;grid-template-columns:repeat(3,72px);row-gap:14px;justify-content:center}
+.key{height:60px;display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:400;color:${C.ink}}
+.key.face{font-size:24px;color:${C.sec}}
 
 /* reminders */
 .rrow{display:flex;align-items:center;justify-content:space-between;padding:16px 0;gap:14px}
