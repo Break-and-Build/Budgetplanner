@@ -74,6 +74,11 @@ const FRAMES = [
     head: ['Shape your', 'month'],
     sub: 'Income, priorities, savings — your split, your way.',
   },
+  {
+    key: 'every', shot: 'activity.png', layout: 'top',
+    head: ['Every spend,', 'at a glance'],
+    sub: 'A quiet record of where your money went.',
+  },
 ];
 
 const available = FRAMES.filter((f) => {

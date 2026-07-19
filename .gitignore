@@ -59,3 +59,7 @@ Screenshots/
 
 # Local working folders
 Graphics/
+
+# Raw device screenshots used to compose store graphics (source material)
+docs/store-assets/raw/*.PNG
+docs/store-assets/raw/*.png
