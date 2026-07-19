@@ -53,7 +53,7 @@ no account, no analytics, no ads, and no network calls that carry user data.
 
 ### Promotional text (170)
 ```
-A calm budget you actually live in. One number tells you what's safe to spend today — log a purchase in five seconds, lock it behind Face ID, and keep your figures private.
+A calm budget you actually live in. One number tells you what's safe to spend today — log a spend in five seconds, lock it behind Face ID, and keep your figures private.
 ```
 
 ### Description
