@@ -20,14 +20,21 @@ Build to submit: **1.0.0 (8)**.
 
 | Field | Value |
 |---|---|
-| Name | `Budget Tracker` |
-| Subtitle (30) | `Know what's safe to spend` |
+| Name (30) | `Budget Tracker - Safe to Spend` |
+| Subtitle (30) | `Log expenses in seconds` |
 | Primary category | **Finance** |
 | Secondary category | *(leave empty)* |
 | Content rights | **No third-party content** |
 | Age rating | **4+** — answer *None* to every content question |
 | Privacy Policy URL | `https://tvbixd.github.io/Budgetplanner1/privacy-policy.html` |
 | License agreement | Apple's standard EULA |
+
+> **Store name vs. device name.** The listing name is `Budget Tracker - Safe to
+> Spend` because plain "Budget Tracker" is already taken on the App Store. The
+> name on the user's home screen stays **Budget Tracker** (`app.json` → `name`)
+> — home-screen labels aren't unique-constrained and long ones get truncated.
+> The two are allowed to differ, so **no rebuild is needed** for this change.
+> Set it in App Store Connect → **App Information → Name**.
 
 ---
 
@@ -92,9 +99,12 @@ No account. No sign-in. No bank connection. Nothing is uploaded — your budget
 lives on your device and nowhere else.
 ```
 
-### Keywords (100 max — this is 99)
+### Keywords (100 max)
+Apple already indexes every word in the **name** and **subtitle**, so don't
+repeat "budget", "tracker", "spend" or "expenses" here — spend the space on
+terms that aren't covered anywhere else.
 ```
-budget,tracker,spending,expense,money,savings,finance,planner,cashflow,bills,budgeting,spend
+money,savings,finance,planner,cashflow,bills,budgeting,daily,private,offline,naira
 ```
 
 ### URLs
