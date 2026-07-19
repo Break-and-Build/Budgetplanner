@@ -102,6 +102,12 @@ const colorLight = {
     hairline: 'rgba(60, 60, 67, 0.12)',
     /** Slightly stronger — used between major sections. */
     divider: 'rgba(60, 60, 67, 0.18)',
+    /**
+     * Outer stroke around cards/surfaces. Separate from `hairline` (which also
+     * draws row separators) so dark mode can drop the outline entirely and let
+     * the elevated surface do the separating, while dividers stay visible.
+     */
+    card: 'rgba(60, 60, 67, 0.12)',
     /** Focus ring. We use ink, not an accent color — keeps it neutral. */
     focus: ink[900],
   },
@@ -174,6 +180,9 @@ const colorDark = {
   border: {
     hairline: 'rgba(235, 235, 245, 0.12)',
     divider: 'rgba(235, 235, 245, 0.18)',
+    // No outer stroke in dark — the elevated surface already separates cards
+    // from the background, and outlines read as noise on a dark canvas.
+    card: 'transparent',
     focus: inkDark[900],
   },
   category: categoryDark,

@@ -219,7 +219,7 @@ function Card({
         backgroundColor: t.color.bg.elevated,
         borderRadius: t.radii.lg,
         borderWidth: StyleSheet.hairlineWidth,
-        borderColor: t.color.border.hairline,
+        borderColor: t.color.border.card,
         overflow: 'hidden',
       }}
     >

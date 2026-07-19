@@ -4,7 +4,7 @@
  */
 
 import React, { useCallback, useEffect, useState } from 'react';
-import { Text, View } from 'react-native';
+import { Image, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useTokens } from '../theme/ThemeProvider';
@@ -86,28 +86,45 @@ export function LockScreen() {
         justifyContent: 'center',
       }}
     >
-      {/* Brand glyph */}
-      <View
+      {/* Brand mark — the real app icon, not a letter placeholder */}
+      <Image
+        source={require('../../assets/icon.png')}
         style={{
           width: 56,
           height: 56,
           borderRadius: 14,
-          backgroundColor: t.color.brand.base,
-          alignItems: 'center',
-          justifyContent: 'center',
           marginBottom: t.space[5],
         }}
-      >
-        <Text style={{ color: '#FFFFFF', fontSize: 26, fontWeight: '700' }}>B</Text>
-      </View>
+        accessibilityIgnoresInvertColors
+      />
 
-      <Text style={[t.type.title2, { color: t.color.text.primary, marginBottom: t.space[2] }]}>
+      {/* Full-width + centred so long names never clip on narrow screens. */}
+      <Text
+        numberOfLines={1}
+        adjustsFontSizeToFit
+        style={[
+          t.type.title2,
+          {
+            color: t.color.text.primary,
+            marginBottom: t.space[2],
+            alignSelf: 'stretch',
+            textAlign: 'center',
+            paddingHorizontal: t.space[6],
+          },
+        ]}
+      >
         Budget Tracker
       </Text>
       <Text
         style={[
           t.type.subhead,
-          { color: error ? t.color.status.overBudget : t.color.text.secondary, marginBottom: t.space[8] },
+          {
+            color: error ? t.color.status.overBudget : t.color.text.secondary,
+            marginBottom: t.space[8],
+            alignSelf: 'stretch',
+            textAlign: 'center',
+            paddingHorizontal: t.space[6],
+          },
         ]}
       >
         {error ? 'Wrong PIN, try again' : 'Enter your PIN to unlock'}

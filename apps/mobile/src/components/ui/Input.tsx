@@ -65,7 +65,7 @@ export function Input({
           paddingHorizontal: t.space[4],
           paddingVertical: multiline ? t.space[3] : 0,
           borderWidth: focused ? 1.5 : StyleSheet.hairlineWidth,
-          borderColor: focused ? t.color.border.focus : t.color.border.hairline,
+          borderColor: focused ? t.color.border.focus : t.color.border.card,
           flexDirection: 'row',
           alignItems: multiline ? 'flex-start' : 'center',
         },

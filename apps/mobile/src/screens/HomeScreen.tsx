@@ -404,7 +404,7 @@ export function HomeScreen() {
               backgroundColor: t.color.bg.elevated,
               borderRadius: t.radii.lg,
               borderWidth: StyleSheet.hairlineWidth,
-              borderColor: t.color.border.hairline,
+              borderColor: t.color.border.card,
               padding: t.space[5],
             }}
           >
@@ -443,7 +443,7 @@ export function HomeScreen() {
               backgroundColor: t.color.bg.elevated,
               borderRadius: t.radii.lg,
               borderWidth: StyleSheet.hairlineWidth,
-              borderColor: t.color.border.hairline,
+              borderColor: t.color.border.card,
               overflow: 'hidden',
             }}
           >
@@ -505,7 +505,7 @@ export function HomeScreen() {
               backgroundColor: pressed ? t.color.bg.sunken : t.color.bg.elevated,
               borderRadius: t.radii.lg,
               borderWidth: StyleSheet.hairlineWidth,
-              borderColor: t.color.border.hairline,
+              borderColor: t.color.border.card,
             })}
           >
             <View
@@ -628,7 +628,7 @@ export function HomeScreen() {
                 backgroundColor: t.color.bg.elevated,
                 borderRadius: t.radii.lg,
                 borderWidth: StyleSheet.hairlineWidth,
-                borderColor: t.color.border.hairline,
+                borderColor: t.color.border.card,
                 overflow: 'hidden',
               }}
             >

@@ -22,7 +22,7 @@ import {
   totalPercent,
 } from '@budgetplanner/core';
 
-import { useTokens } from '../theme/ThemeProvider';
+import { useIsDark, useTokens } from '../theme/ThemeProvider';
 import { categoryTint } from '../theme/categoryColor';
 import { Input } from './ui/Input';
 import { AmountDisplay } from './AmountDisplay';
@@ -37,6 +37,7 @@ interface CategoryEditorProps {
 
 export function CategoryEditor({ categories, onChange, symbol, safeToSpend = 0 }: CategoryEditorProps) {
   const t = useTokens();
+  const isDark = useIsDark();
   const [colorPickerFor, setColorPickerFor] = useState<string | null>(null);
 
   const total = totalPercent(categories);
@@ -78,7 +79,7 @@ export function CategoryEditor({ categories, onChange, symbol, safeToSpend = 0 }
           backgroundColor: t.color.bg.elevated,
           borderRadius: t.radii.lg,
           borderWidth: StyleSheet.hairlineWidth,
-          borderColor: t.color.border.hairline,
+          borderColor: t.color.border.card,
           overflow: 'hidden',
         }}
       >
@@ -277,7 +278,7 @@ export function CategoryEditor({ categories, onChange, symbol, safeToSpend = 0 }
                     flex: 1,
                     height: 6,
                     borderRadius: 3,
-                    backgroundColor: categoryTint(c.color),
+                    backgroundColor: categoryTint(c.color, isDark),
                     marginHorizontal: t.space[3],
                     overflow: 'hidden',
                   }}

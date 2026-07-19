@@ -287,7 +287,7 @@ function SectionCard({
         backgroundColor: pressed ? t.color.bg.sunken : t.color.bg.elevated,
         borderRadius: t.radii.lg,
         borderWidth: StyleSheet.hairlineWidth,
-        borderColor: t.color.border.hairline,
+        borderColor: t.color.border.card,
       })}
     >
       <View style={{ flex: 1, minWidth: 0 }}>
@@ -339,7 +339,7 @@ function BucketsCard({
         backgroundColor: pressed ? t.color.bg.sunken : t.color.bg.elevated,
         borderRadius: t.radii.lg,
         borderWidth: StyleSheet.hairlineWidth,
-        borderColor: t.color.border.hairline,
+        borderColor: t.color.border.card,
       })}
     >
       <View

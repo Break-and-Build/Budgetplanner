@@ -27,12 +27,18 @@ function mixHex(hex: string, bg: string, weight: number): string {
   )}${channel(a.b * weight + b.b * (1 - weight))}`;
 }
 
-/** Light background tint for a category accent (bar track, chip fill). */
-export function categoryTint(hex: string): string {
-  return mixHex(hex, '#FFFFFF', 0.14);
+/**
+ * Background tint for a category accent (bar track, chip fill).
+ *
+ * Light: mix toward white — reproduces the original hand-tuned token tints.
+ * Dark:  mix toward the elevated dark surface, so the track reads as a subtle
+ *        shadow of the accent rather than a bright band.
+ */
+export function categoryTint(hex: string, isDark = false): string {
+  return isDark ? mixHex(hex, '#1C1C1E', 0.18) : mixHex(hex, '#FFFFFF', 0.14);
 }
 
 /** Base + derived tint for a category accent. */
-export function categoryColors(hex: string): { base: string; tint: string } {
-  return { base: hex, tint: categoryTint(hex) };
+export function categoryColors(hex: string, isDark = false): { base: string; tint: string } {
+  return { base: hex, tint: categoryTint(hex, isDark) };
 }

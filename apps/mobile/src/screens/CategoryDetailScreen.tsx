@@ -33,7 +33,7 @@ import type { RouteProp } from '@react-navigation/native';
 import { ChevronLeft } from 'lucide-react-native';
 import type { CategoryId, Transaction } from '@budgetplanner/core';
 
-import { useTokens } from '../theme/ThemeProvider';
+import { useIsDark, useTokens } from '../theme/ThemeProvider';
 import { HeaderIconButton } from '../components/ScreenHeader';
 import { AmountDisplay } from '../components/AmountDisplay';
 import { CategoryDot } from '../components/CategoryDot';
@@ -55,6 +55,7 @@ type Route = RouteProp<RootStackParamList, 'CategoryDetail'>;
 
 export function CategoryDetailScreen() {
   const t = useTokens();
+  const isDark = useIsDark();
   const nav = useNavigation<Nav>();
   const route = useRoute<Route>();
   const insets = useSafeAreaInsets();
@@ -178,7 +179,7 @@ export function CategoryDetailScreen() {
                   spentRatio={spentRatio}
                   monthRatio={monthRatio}
                   color={cat.color}
-                  trackColor={categoryTint(cat.color)}
+                  trackColor={categoryTint(cat.color, isDark)}
                   overBudget={over}
                   size={180}
                   strokeWidth={10}

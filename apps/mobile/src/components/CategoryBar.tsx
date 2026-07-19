@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef } from 'react';
 import { Animated, Easing, Pressable, StyleSheet, Text, View } from 'react-native';
-import { useTokens } from '../theme/ThemeProvider';
+import { useIsDark, useTokens } from '../theme/ThemeProvider';
 import { categoryTint } from '../theme/categoryColor';
 import { useReducedMotion } from '../theme/useReducedMotion';
 import { AmountDisplay, MASK } from './AmountDisplay';
@@ -38,8 +38,9 @@ export function CategoryBar({
   onPress,
 }: CategoryBarProps) {
   const t = useTokens();
+  const isDark = useIsDark();
   const { privacyMode } = useBudget();
-  const tint = categoryTint(color);
+  const tint = categoryTint(color, isDark);
   const { multiplier } = useReducedMotion();
 
   const remaining = allocated - spent;

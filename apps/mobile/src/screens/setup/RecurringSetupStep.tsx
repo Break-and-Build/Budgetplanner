@@ -66,7 +66,7 @@ export function RecurringSetupStep({ step, totalSteps, mode = 'create', form, on
               backgroundColor: t.color.bg.elevated,
               borderRadius: t.radii.lg,
               borderWidth: StyleSheet.hairlineWidth,
-              borderColor: t.color.border.hairline,
+              borderColor: t.color.border.card,
               overflow: 'hidden',
               marginBottom: t.space[4],
             }}

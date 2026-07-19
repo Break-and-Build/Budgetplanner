@@ -119,7 +119,7 @@ export function SavingsStep({ step, totalSteps, mode = 'create', form, setForm, 
           backgroundColor: t.color.bg.elevated,
           borderRadius: t.radii.lg,
           borderWidth: StyleSheet.hairlineWidth,
-          borderColor: t.color.border.hairline,
+          borderColor: t.color.border.card,
           marginBottom: t.space[4],
         }}
       >
@@ -161,7 +161,7 @@ export function SavingsStep({ step, totalSteps, mode = 'create', form, setForm, 
                 backgroundColor: t.color.bg.elevated,
                 borderRadius: t.radii.md,
                 borderWidth: StyleSheet.hairlineWidth,
-                borderColor: t.color.border.hairline,
+                borderColor: t.color.border.card,
               }}
             >
               {/* Top row: name + remove */}
@@ -207,10 +207,13 @@ export function SavingsStep({ step, totalSteps, mode = 'create', form, setForm, 
                   gap: t.space[2],
                 }}
               >
-                {/* $/% segmented toggle */}
+                {/* $/% segmented toggle — height matches the value field (48)
+                    so the two sit flush; segments stretch to fill it. */}
                 <View
                   style={{
                     flexDirection: 'row',
+                    alignItems: 'stretch',
+                    height: 48,
                     backgroundColor: t.color.bg.sunken,
                     borderRadius: t.radii.md,
                     padding: 2,
@@ -228,11 +231,11 @@ export function SavingsStep({ step, totalSteps, mode = 'create', form, setForm, 
                         accessibilityState={{ selected }}
                         style={{
                           paddingHorizontal: t.space[3],
-                          paddingVertical: t.space[2],
                           minWidth: 40,
                           borderRadius: t.radii.md - 2,
                           backgroundColor: selected ? t.color.bg.elevated : 'transparent',
                           alignItems: 'center',
+                          justifyContent: 'center',
                           ...(selected ? t.shadow.xs : {}),
                         }}
                       >
