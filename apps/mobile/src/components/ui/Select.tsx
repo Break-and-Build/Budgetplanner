@@ -55,7 +55,7 @@ export function Select({
             alignItems: 'center',
             justifyContent: 'space-between',
             borderWidth: StyleSheet.hairlineWidth,
-            borderColor: t.color.border.hairline,
+            borderColor: t.color.border.card,
           },
         ]}
       >

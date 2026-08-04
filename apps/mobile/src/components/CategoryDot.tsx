@@ -1,10 +1,9 @@
 import React from 'react';
 import { View, type StyleProp, type ViewStyle } from 'react-native';
-import type { CategoryId } from '@budgetplanner/core';
-import { useTokens } from '../theme/ThemeProvider';
 
 interface CategoryDotProps {
-  category: CategoryId;
+  /** The category's accent colour (hex). */
+  color: string;
   /** Diameter in points. Default 8 per design tokens. */
   size?: number;
   style?: StyleProp<ViewStyle>;
@@ -15,8 +14,7 @@ interface CategoryDotProps {
  * Always paired with the category name in copy — never the sole indicator
  * of category (per brief's accessibility rules).
  */
-export function CategoryDot({ category, size = 8, style }: CategoryDotProps) {
-  const t = useTokens();
+export function CategoryDot({ color, size = 8, style }: CategoryDotProps) {
   return (
     <View
       // Decorative — the label next to it carries the meaning for screen readers.
@@ -27,7 +25,7 @@ export function CategoryDot({ category, size = 8, style }: CategoryDotProps) {
           width: size,
           height: size,
           borderRadius: size / 2,
-          backgroundColor: t.color.category[category].base,
+          backgroundColor: color,
         },
         style,
       ]}

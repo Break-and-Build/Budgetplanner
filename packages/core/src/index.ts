@@ -11,12 +11,29 @@ export type {
   SplitPlan,
   // v2 tracking types
   CategoryId,
+  CategoryDef,
+  ReminderTime,
   Transaction,
   BudgetPlan,
   MonthState,
   BudgetBlob,
   BudgetBlobV1,
+  RecurringTransaction,
 } from './types';
+
+// Category helpers (percentage-based custom categories)
+export {
+  MIN_CATEGORIES,
+  MAX_CATEGORIES,
+  CATEGORY_PALETTE,
+  defaultCategories,
+  categoriesFromSplit,
+  totalPercent,
+  normalizeCategoryPercents,
+  categoriesAreValid,
+  newCategoryId,
+  nextPaletteColor,
+} from './categories';
 
 // Calculations
 export {
@@ -40,9 +57,20 @@ export {
   monthKeyFor,
   nextMonthKey,
   defaultSplit,
+  cleanPlan,
   emptyBudgetBlob,
   migrateV1ToV2,
   parseBudgetBlob,
   shouldShowMonthCloseBanner,
   rollForward,
 } from './storage';
+
+// Recurring transaction rules
+export { shouldFireRule, materializeRule, runRecurringRules } from './recurring';
+
+// Reminder-time helpers
+export {
+  MAX_REMINDER_TIMES,
+  defaultReminderTimes,
+  normalizeReminderTimes,
+} from './reminders';

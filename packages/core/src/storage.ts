@@ -20,6 +20,8 @@ import type {
   SavingsData,
   SplitPlan,
 } from './types';
+import { categoriesFromSplit, defaultCategories } from './categories';
+import { defaultReminderTimes, normalizeReminderTimes } from './reminders';
 
 // React Native injects this at build time. In other environments it's
 // undefined and the self-checks at the bottom are skipped.
@@ -37,6 +39,23 @@ export function defaultSplit(): SplitPlan {
   return { essentials: 50, growth: 25, stability: 15, rewards: 10 };
 }
 
+/**
+ * Drop blank rows (no name AND no amount/value) from a plan before saving.
+ * Setup steps let a user leave a trailing empty row while editing; this keeps
+ * those phantoms out of the persisted plan so totals and lists stay clean.
+ */
+export function cleanPlan(plan: BudgetPlan): BudgetPlan {
+  return {
+    income: plan.income.filter((i) => i.name.trim() || i.amount > 0),
+    priorities: plan.priorities.filter((p) => p.name.trim() || p.amount > 0),
+    savings: {
+      ...plan.savings,
+      entries: plan.savings.entries.filter((e) => e.name.trim() || e.value > 0),
+    },
+    categories: plan.categories,
+  };
+}
+
 /** Construct a fresh blob for a brand-new install. */
 export function emptyBudgetBlob(currency: string, now: Date = new Date()): BudgetBlob {
   return {
@@ -48,11 +67,12 @@ export function emptyBudgetBlob(currency: string, now: Date = new Date()): Budge
         income: [],
         priorities: [],
         savings: { enabled: false, entries: [] },
-        split: defaultSplit(),
+        categories: defaultCategories(),
       },
       transactions: [],
     },
     history: [],
+    recurring: [],
     setupStep: 1,
     setupComplete: false,
   };
@@ -90,7 +110,7 @@ export function migrateV1ToV2(v1: BudgetBlobV1 | null | undefined, now: Date = n
     income: Array.isArray(v1.incomeSources) ? v1.incomeSources : [],
     priorities: Array.isArray(v1.expenses) ? v1.expenses : [],
     savings,
-    split: defaultSplit(),
+    categories: categoriesFromSplit(v1.splitPlan),
   };
 
   const current: MonthState = {
@@ -108,6 +128,7 @@ export function migrateV1ToV2(v1: BudgetBlobV1 | null | undefined, now: Date = n
     currency: v1.currency || '₦',
     current,
     history: [],
+    recurring: [],
     setupStep: setupComplete ? undefined : Math.min(6, Math.max(1, v1.currentStep ?? 1)),
     setupComplete,
   };
@@ -130,8 +151,20 @@ export function parseBudgetBlob(raw: unknown, now: Date = new Date()): BudgetBlo
       currency: v2.currency || '₦',
       current: hydrateMonth(v2.current, now),
       history: Array.isArray(v2.history) ? v2.history.map((m) => hydrateMonth(m, now)) : [],
+      // Recurring was added after schemaVersion 2 shipped — older v2 blobs
+      // won't have it; default to empty array for forward-compat.
+      recurring: Array.isArray(v2.recurring) ? v2.recurring : [],
       setupStep: typeof v2.setupStep === 'number' ? v2.setupStep : undefined,
       setupComplete: !!v2.setupComplete,
+      // Daily reminder times. Prefer the new array; fall back to the old
+      // single-time fields; else default to one 20:00 (8pm) nudge.
+      reminderTimes: Array.isArray(v2.reminderTimes)
+        ? normalizeReminderTimes(v2.reminderTimes)
+        : typeof v2.reminderHour === 'number'
+          ? normalizeReminderTimes([{ hour: v2.reminderHour, minute: v2.reminderMinute ?? 0 }])
+          : defaultReminderTimes(),
+      walkthroughSeen: typeof v2.walkthroughSeen === 'boolean' ? v2.walkthroughSeen : false,
+      privacyMode: typeof v2.privacyMode === 'boolean' ? v2.privacyMode : false,
     };
   }
 
@@ -142,15 +175,29 @@ export function parseBudgetBlob(raw: unknown, now: Date = new Date()): BudgetBlo
 function hydrateMonth(m: Partial<MonthState>, now: Date): MonthState {
   return {
     monthKey: m.monthKey || monthKeyFor(now),
-    plan: m.plan ?? {
-      income: [],
-      priorities: [],
-      savings: { enabled: false, entries: [] },
-      split: defaultSplit(),
-    },
+    plan: hydratePlan(m.plan),
     transactions: Array.isArray(m.transactions) ? m.transactions : [],
     reflection: m.reflection,
     closedAt: m.closedAt,
+  };
+}
+
+/**
+ * Normalise a stored plan to the current shape. Older blobs carry a fixed
+ * `split`; convert it to `categories` (keeping the four legacy ids so their
+ * transactions still map). Missing/blank plans fall back to fresh defaults.
+ */
+function hydratePlan(plan: Partial<BudgetPlan> | undefined): BudgetPlan {
+  const p = (plan ?? {}) as Partial<BudgetPlan> & { split?: SplitPlan };
+  const categories =
+    Array.isArray(p.categories) && p.categories.length > 0
+      ? p.categories
+      : categoriesFromSplit(p.split);
+  return {
+    income: Array.isArray(p.income) ? p.income : [],
+    priorities: Array.isArray(p.priorities) ? p.priorities : [],
+    savings: p.savings ?? { enabled: false, entries: [] },
+    categories,
   };
 }
 
@@ -206,7 +253,7 @@ export function rollForward(blob: BudgetBlob, now: Date = new Date()): BudgetBlo
       income: blob.current.plan.income,
       priorities: blob.current.plan.priorities,
       savings: blob.current.plan.savings,
-      split: blob.current.plan.split,
+      categories: blob.current.plan.categories,
     },
     transactions: [],
   };
@@ -238,7 +285,37 @@ if (typeof __DEV__ !== 'undefined' && __DEV__) {
   console.assert(v2.current.monthKey === '2026-05', 'monthKey computed');
   console.assert(v2.current.plan.income.length === 1, 'income carried');
   console.assert(v2.current.plan.savings.entries.length === 1, 'legacy savings migrated to entries');
+  console.assert(v2.current.plan.categories.length === 4, 'migrated to default categories');
   console.assert(v2.setupComplete === false, 'incomplete wizard remains incomplete');
+
+  // Legacy split → categories conversion keeps ids stable
+  const converted = parseBudgetBlob(
+    {
+      schemaVersion: 2,
+      currency: '₦',
+      current: {
+        monthKey: '2026-05',
+        plan: {
+          income: [],
+          priorities: [],
+          savings: { enabled: false, entries: [] },
+          split: { essentials: 50, growth: 25, stability: 15, rewards: 10 },
+        },
+        transactions: [],
+      },
+      history: [],
+    },
+    new Date('2026-05-17T00:00:00Z'),
+  );
+  console.assert(converted.current.plan.categories.length === 4, 'split converted to 4 categories');
+  console.assert(
+    converted.current.plan.categories[0].id === 'essentials',
+    'legacy category ids preserved',
+  );
+  console.assert(
+    converted.current.plan.categories.reduce((s, c) => s + c.percent, 0) === 100,
+    'converted percents sum to 100',
+  );
 
   // Banner logic
   console.assert(
@@ -257,7 +334,11 @@ if (typeof __DEV__ !== 'undefined' && __DEV__) {
   // Empty blob
   const fresh = emptyBudgetBlob('€', new Date('2026-05-17T00:00:00Z'));
   console.assert(fresh.setupComplete === false, 'fresh blob is unset');
-  console.assert(fresh.current.plan.split.essentials === 50, 'default split essentials');
+  console.assert(fresh.current.plan.categories.length === 4, 'fresh blob has default categories');
+  console.assert(
+    fresh.current.plan.categories.reduce((s, c) => s + c.percent, 0) === 100,
+    'default categories sum to 100',
+  );
 
   // Roll forward
   const rolled = rollForward(v2, new Date('2026-06-01T00:00:00Z'));

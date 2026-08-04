@@ -83,7 +83,7 @@ export function SafeToSpendStep({ step, totalSteps, form, onNext, onBack }: Step
           backgroundColor: t.color.bg.elevated,
           borderRadius: t.radii.lg,
           borderWidth: StyleSheet.hairlineWidth,
-          borderColor: t.color.border.hairline,
+          borderColor: t.color.border.card,
         }}
       >
         <MathRow label="Income" value={totalIncome} symbol={symbol} sign="+" />
@@ -108,7 +108,7 @@ export function SafeToSpendStep({ step, totalSteps, form, onNext, onBack }: Step
           },
         ]}
       >
-        Next you'll split this across four categories.
+        Next you'll split this across your categories.
       </Text>
     </ModalStackShell>
   );

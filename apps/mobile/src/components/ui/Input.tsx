@@ -22,6 +22,8 @@ interface InputProps {
   autoFocus?: boolean;
   accessibilityLabel?: string;
   containerStyle?: StyleProp<ViewStyle>;
+  /** Fires when the field loses focus. Use for validate/clamp-on-blur. */
+  onBlur?: () => void;
   /** Optional left/right slots for currency symbols, units, etc. */
   leading?: React.ReactNode;
   trailing?: React.ReactNode;
@@ -43,6 +45,7 @@ export function Input({
   autoFocus,
   accessibilityLabel,
   containerStyle,
+  onBlur,
   leading,
   trailing,
 }: InputProps) {
@@ -62,7 +65,7 @@ export function Input({
           paddingHorizontal: t.space[4],
           paddingVertical: multiline ? t.space[3] : 0,
           borderWidth: focused ? 1.5 : StyleSheet.hairlineWidth,
-          borderColor: focused ? t.color.border.focus : t.color.border.hairline,
+          borderColor: focused ? t.color.border.focus : t.color.border.card,
           flexDirection: 'row',
           alignItems: multiline ? 'flex-start' : 'center',
         },
@@ -83,7 +86,10 @@ export function Input({
         allowFontScaling
         maxFontSizeMultiplier={t.a11y.maxFontScale}
         onFocus={() => setFocused(true)}
-        onBlur={() => setFocused(false)}
+        onBlur={() => {
+          setFocused(false);
+          onBlur?.();
+        }}
         style={[
           textStyle,
           {

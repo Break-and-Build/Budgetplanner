@@ -8,8 +8,10 @@ import { CategoryDot } from './CategoryDot';
 interface TransactionRowProps {
   transaction: Transaction;
   symbol: string;
-  /** Category name lookup. Keeps the row decoupled from the category enum. */
+  /** Category name lookup. Keeps the row decoupled from the category list. */
   categoryLabel: string;
+  /** Category accent colour (hex) for the dot. */
+  categoryColor: string;
   onPress?: () => void;
   /** When true (used inside CategoryDetail), hide the category dot+label. */
   hideCategory?: boolean;
@@ -28,6 +30,7 @@ export function TransactionRow({
   transaction,
   symbol,
   categoryLabel,
+  categoryColor,
   onPress,
   hideCategory = false,
 }: TransactionRowProps) {
@@ -59,7 +62,7 @@ export function TransactionRow({
     >
       {!hideCategory ? (
         <CategoryDot
-          category={transaction.categoryId}
+          color={categoryColor}
           style={{ marginRight: t.space[3] }}
         />
       ) : null}

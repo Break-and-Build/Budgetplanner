@@ -6,17 +6,17 @@
  */
 
 import type {
+  CategoryDef,
   IncomeSource,
   PriorityExpense,
   SavingsData,
-  SplitPlan,
 } from '@budgetplanner/core';
 
 export interface SetupFormState {
   income: IncomeSource[];
   priorities: PriorityExpense[];
   savings: SavingsData;
-  split: SplitPlan;
+  categories: CategoryDef[];
 }
 
 export interface StepProps {

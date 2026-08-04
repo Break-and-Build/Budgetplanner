@@ -9,5 +9,5 @@
 
 export { tokens, tokensDark } from './tokens';
 export type { Tokens, CategoryId } from './tokens';
-export { ThemeProvider, useTokens } from './ThemeProvider';
+export { ThemeProvider, useTokens, useIsDark } from './ThemeProvider';
 export { useReducedMotion, useScaledDuration } from './useReducedMotion';

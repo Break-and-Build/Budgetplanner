@@ -39,13 +39,16 @@ import type { CategoryId } from '@budgetplanner/core';
 
 import { useTokens } from '../theme/ThemeProvider';
 import { HeaderIconButton } from '../components/ScreenHeader';
+import DateTimePicker from '@react-native-community/datetimepicker';
+import { Platform } from 'react-native';
 import { CategoryDot } from '../components/CategoryDot';
+import { MASK } from '../components/AmountDisplay';
 import { CurrencyInput } from '../components/CurrencyInput';
 import { Input } from '../components/ui/Input';
 import { Button } from '../components/ui/Button';
 import { BottomSheet } from '../components/BottomSheet';
 import { useBudget } from '../state/BudgetContext';
-import { CATEGORY_IDS, CATEGORY_LABELS } from '../state/categories';
+import { resolveCategory } from '../state/categories';
 import type { RootStackParamList } from '../types/navigation';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
@@ -59,6 +62,8 @@ export function TransactionDetailScreen() {
   const { width } = useWindowDimensions();
   const {
     symbol,
+    categories,
+    privacyMode,
     findTransaction,
     updateTransaction,
     removeTransaction,
@@ -74,6 +79,10 @@ export function TransactionDetailScreen() {
   const [amount, setAmount] = useState(tx?.amount ?? 0);
   const [categoryId, setCategoryId] = useState<CategoryId>(tx?.categoryId ?? 'essentials');
   const [note, setNote] = useState(tx?.note ?? '');
+  const [loggedAt, setLoggedAt] = useState<Date>(
+    tx ? new Date(tx.loggedAt) : new Date(),
+  );
+  const [datePickerOpen, setDatePickerOpen] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
 
   // Defensive re-sync if the param changes (shouldn't happen, but cheap insurance).
@@ -82,6 +91,7 @@ export function TransactionDetailScreen() {
       setAmount(tx.amount);
       setCategoryId(tx.categoryId);
       setNote(tx.note ?? '');
+      setLoggedAt(new Date(tx.loggedAt));
     }
   }, [tx?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -92,19 +102,30 @@ export function TransactionDetailScreen() {
       !!tx &&
       (amount !== tx.amount ||
         categoryId !== tx.categoryId ||
-        (note.trim() || undefined) !== tx.note),
-    [tx, amount, categoryId, note],
+        (note.trim() || undefined) !== tx.note ||
+        loggedAt.toISOString() !== tx.loggedAt),
+    [tx, amount, categoryId, note, loggedAt],
   );
 
   const onSave = useCallback(() => {
     if (!tx || !canSave) return;
+    // If the user moved the date to a different month, we recompute monthKey
+    // so the transaction lands under the right month for plan-vs-actual math.
+    // (Cross-month moves between current month and a closed month are NOT
+    // supported in v1 — the transaction stays in `current.transactions` even
+    // if its date is now in a closed historic month; that's a v1.1 follow-up.)
+    const newMonthKey = `${loggedAt.getUTCFullYear()}-${String(
+      loggedAt.getUTCMonth() + 1,
+    ).padStart(2, '0')}`;
     updateTransaction(tx.id, {
       amount,
       categoryId,
       note: note.trim() || undefined,
+      loggedAt: loggedAt.toISOString(),
+      monthKey: newMonthKey,
     });
     nav.goBack();
-  }, [tx, amount, categoryId, note, canSave, updateTransaction, nav]);
+  }, [tx, amount, categoryId, note, loggedAt, canSave, updateTransaction, nav]);
 
   const onDelete = useCallback(() => {
     if (!tx) return;
@@ -238,14 +259,15 @@ export function TransactionDetailScreen() {
               paddingBottom: t.space[5],
             }}
           >
-            {CATEGORY_IDS.map((id) => {
+            {categories.map((c) => {
+              const id = c.id;
               const selected = categoryId === id;
               return (
                 <Pressable
                   key={id}
                   onPress={() => setCategoryId(id)}
                   accessibilityRole="button"
-                  accessibilityLabel={`${CATEGORY_LABELS[id]}${selected ? ', selected' : ''}`}
+                  accessibilityLabel={`${c.name}${selected ? ', selected' : ''}`}
                   accessibilityState={{ selected }}
                   style={({ pressed }) => [
                     {
@@ -255,8 +277,9 @@ export function TransactionDetailScreen() {
                       paddingVertical: t.space[2],
                       borderRadius: t.radii.pill,
                       minHeight: 36,
+                      // Selected → light-indigo tinted pill, matches Activity + FastLog.
                       backgroundColor: selected
-                        ? t.color.text.primary
+                        ? t.color.brand.tint
                         : pressed
                           ? t.color.bg.sunken
                           : 'transparent',
@@ -266,7 +289,7 @@ export function TransactionDetailScreen() {
                   ]}
                 >
                   <CategoryDot
-                    category={id}
+                    color={c.color}
                     size={8}
                     style={{ marginRight: t.space[2] }}
                   />
@@ -276,12 +299,12 @@ export function TransactionDetailScreen() {
                     style={[
                       t.type.subhead,
                       {
-                        color: selected ? t.color.text.inverse : t.color.text.primary,
+                        color: selected ? t.color.brand.base : t.color.text.primary,
                         fontWeight: selected ? t.fontWeight.semibold : t.fontWeight.regular,
                       },
                     ]}
                   >
-                    {CATEGORY_LABELS[id]}
+                    {c.name}
                   </Text>
                 </Pressable>
               );
@@ -304,7 +327,9 @@ export function TransactionDetailScreen() {
             />
           </View>
 
-          {/* Date — read-only in v1 */}
+          {/* Date — tap to change. iOS shows an inline spinner that we
+              place under the field. Android pops a native dialog via
+              `display: 'default'`. */}
           <FieldLabel>Logged</FieldLabel>
           <View
             style={{
@@ -312,36 +337,54 @@ export function TransactionDetailScreen() {
               paddingBottom: t.space[2],
             }}
           >
-            <View
-              style={{
+            <Pressable
+              onPress={() => setDatePickerOpen((v) => !v)}
+              accessibilityRole="button"
+              accessibilityLabel={`Logged on ${formatFullDate(loggedAt)}. Tap to change.`}
+              style={({ pressed }) => ({
                 minHeight: 48,
                 paddingHorizontal: t.space[4],
                 paddingVertical: t.space[3],
-                backgroundColor: t.color.bg.sunken,
+                backgroundColor: pressed ? t.color.bg.sunken : t.color.bg.sunken,
                 borderRadius: t.radii.md,
                 borderWidth: StyleSheet.hairlineWidth,
-                borderColor: t.color.border.hairline,
+                borderColor: datePickerOpen
+                  ? t.color.border.focus
+                  : t.color.border.hairline,
                 justifyContent: 'center',
-              }}
+                opacity: pressed ? 0.7 : 1,
+              })}
             >
               <Text
                 allowFontScaling
                 maxFontSizeMultiplier={t.a11y.maxFontScale}
                 style={[t.type.body, { color: t.color.text.primary }]}
               >
-                {formatFullDate(new Date(tx.loggedAt))}
+                {formatFullDate(loggedAt)}
               </Text>
-            </View>
-            <Text
-              allowFontScaling
-              maxFontSizeMultiplier={t.a11y.maxFontScale}
-              style={[
-                t.type.caption1,
-                { color: t.color.text.tertiary, marginTop: t.space[1] },
-              ]}
-            >
-              Timestamp locked in v1. To re-date, delete and re-log.
-            </Text>
+            </Pressable>
+
+            {/* iOS: inline spinner under the field (always visible when toggled
+                open). Android: modal dialog that opens once and closes itself
+                on selection — we close datePickerOpen via the event handler. */}
+            {datePickerOpen ? (
+              <DateTimePicker
+                value={loggedAt}
+                mode="datetime"
+                display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                maximumDate={new Date()}
+                onChange={(event, selected) => {
+                  // Android dialog fires onChange with `dismissed` on cancel.
+                  if (Platform.OS === 'android') {
+                    setDatePickerOpen(false);
+                  }
+                  if (event.type === 'set' && selected) {
+                    setLoggedAt(selected);
+                  }
+                }}
+                style={{ alignSelf: 'flex-start', marginTop: t.space[2] }}
+              />
+            ) : null}
           </View>
         </ScrollView>
 
@@ -390,7 +433,8 @@ export function TransactionDetailScreen() {
           ]}
         >
           {symbol}
-          {tx.amount.toLocaleString('en-US')} from {CATEGORY_LABELS[tx.categoryId]}
+          {privacyMode ? MASK : tx.amount.toLocaleString('en-US')} from{' '}
+          {resolveCategory(categories, tx.categoryId).name}
           {tx.note ? ` · ${tx.note}` : ''}.
         </Text>
         <View style={{ flexDirection: 'row', gap: t.space[3], marginBottom: t.space[2] }}>

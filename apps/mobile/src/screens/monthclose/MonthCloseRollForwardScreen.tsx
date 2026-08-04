@@ -24,7 +24,6 @@ import { useTokens } from '../../theme/ThemeProvider';
 import { ModalStackShell } from '../../components/ModalStackShell';
 import { AmountDisplay } from '../../components/AmountDisplay';
 import { CategoryDot } from '../../components/CategoryDot';
-import { CATEGORY_IDS, CATEGORY_LABELS } from '../../state/categories';
 
 interface Props {
   plan: BudgetPlan;
@@ -138,26 +137,27 @@ export function MonthCloseRollForwardScreen({
 
       {/* Buckets card */}
       <Card title="Categories">
-        {CATEGORY_IDS.map((id, idx) => (
+        {plan.categories.map((c, idx) => (
           <View
-            key={id}
+            key={c.id}
             style={{
               flexDirection: 'row',
               alignItems: 'center',
               paddingHorizontal: t.space[4],
               paddingVertical: t.space[3],
               borderBottomWidth:
-                idx < CATEGORY_IDS.length - 1 ? StyleSheet.hairlineWidth : 0,
+                idx < plan.categories.length - 1 ? StyleSheet.hairlineWidth : 0,
               borderBottomColor: t.color.border.hairline,
             }}
           >
-            <CategoryDot category={id} size={8} style={{ marginRight: t.space[3] }} />
+            <CategoryDot color={c.color} size={8} style={{ marginRight: t.space[3] }} />
             <Text
               allowFontScaling
               maxFontSizeMultiplier={t.a11y.maxFontScale}
+              numberOfLines={1}
               style={[t.type.body, { color: t.color.text.primary, flex: 1 }]}
             >
-              {CATEGORY_LABELS[id]}
+              {c.name || 'Untitled'}
             </Text>
             <Text
               allowFontScaling
@@ -170,7 +170,7 @@ export function MonthCloseRollForwardScreen({
                 },
               ]}
             >
-              {plan.split[id]}%
+              {c.percent}%
             </Text>
           </View>
         ))}
@@ -219,7 +219,7 @@ function Card({
         backgroundColor: t.color.bg.elevated,
         borderRadius: t.radii.lg,
         borderWidth: StyleSheet.hairlineWidth,
-        borderColor: t.color.border.hairline,
+        borderColor: t.color.border.card,
         overflow: 'hidden',
       }}
     >

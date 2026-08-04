@@ -18,6 +18,11 @@
  */
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import {
+  getNotificationsGranted,
+  requestNotificationPermission,
+  scheduleAllReminders,
+} from '../lib/notifications';
 import React, {
   createContext,
   useCallback,
@@ -31,8 +36,11 @@ import type {
   BudgetBlob,
   BudgetBlobV1,
   BudgetPlan,
+  CategoryDef,
   MonthState,
+  RecurringTransaction,
   ReflectionData,
+  ReminderTime,
   Transaction,
 } from '@budgetplanner/core';
 import {
@@ -40,7 +48,15 @@ import {
   migrateV1ToV2,
   parseBudgetBlob,
   rollForward,
+  runRecurringRules,
   symbolFor,
+  MAX_CATEGORIES,
+  MIN_CATEGORIES,
+  newCategoryId,
+  nextPaletteColor,
+  normalizeCategoryPercents,
+  defaultReminderTimes,
+  normalizeReminderTimes,
 } from '@budgetplanner/core';
 
 /** Stable AsyncStorage key for the v2 blob. */
@@ -68,6 +84,52 @@ interface BudgetContextValue {
   // ─── Plan / currency ──────────────────────────────────────────────────────
   setPlan: (plan: BudgetPlan) => void;
   setCurrency: (code: string) => void;
+
+  // ─── Categories (user-defined, percentage-based) ──────────────────────────
+  /** The current month's categories. */
+  categories: CategoryDef[];
+  /** Replace the whole category list (Manage Categories screen owns validation). */
+  setCategories: (categories: CategoryDef[]) => void;
+  /** Append a blank category at 0% (no-op at the 8-category cap). */
+  addCategory: () => void;
+  /** Patch one category by id. */
+  updateCategory: (id: string, patch: Partial<CategoryDef>) => void;
+  /** Remove a category and rebalance the rest to 100% (no-op at 1 category). */
+  removeCategory: (id: string) => void;
+
+  // ─── First-run walkthrough ────────────────────────────────────────────────
+  /** True once the spotlight tour has been seen or skipped. */
+  walkthroughSeen: boolean;
+  /** Mark the tour resolved so it never auto-shows again. */
+  markWalkthroughSeen: () => void;
+
+  // ─── Privacy mode ─────────────────────────────────────────────────────────
+  /** When true, all amounts render masked (••••). */
+  privacyMode: boolean;
+  /** Flip privacy mode on/off (persisted). */
+  togglePrivacyMode: () => void;
+  /**
+   * True once the native splash screen has been hidden. The tour waits on this
+   * so its Modal never opens while the splash is still up (which would keep the
+   * splash from dismissing on iOS).
+   */
+  splashHidden: boolean;
+  /** Called by the app root right after SplashScreen.hideAsync(). */
+  markSplashHidden: () => void;
+
+  // ─── Recurring transaction rules ──────────────────────────────────────────
+  recurring: RecurringTransaction[];
+  addRecurring: (rule: Omit<RecurringTransaction, 'id' | 'createdAt'>) => void;
+  updateRecurring: (id: string, patch: Partial<RecurringTransaction>) => void;
+  removeRecurring: (id: string) => void;
+
+  // ─── Reminders (local notifications, on by default) ───────────────────────
+  /** Daily reminder times. Reminders fire automatically once the OS permits. */
+  reminderTimes: ReminderTime[];
+  /** Replace the reminder times (normalised + rescheduled). */
+  setReminderTimes: (times: ReminderTime[]) => void;
+  /** True when the OS currently permits notifications (drives the Settings hint). */
+  notificationsGranted: boolean;
 
   // ─── Month close ──────────────────────────────────────────────────────────
   /**
@@ -155,7 +217,14 @@ export function BudgetProvider({ children }: { children: React.ReactNode }) {
         if (rawV2) {
           const parsed = JSON.parse(rawV2);
           const hydrated = parseBudgetBlob(parsed);
-          if (!cancelled) setBlob(hydrated);
+          // Fire any recurring rules whose day has passed this month and
+          // haven't already fired. Pure: same input + date → same output.
+          const withRecurring = runRecurringRules(
+            hydrated,
+            new Date(),
+            () => `tx-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+          );
+          if (!cancelled) setBlob(withRecurring);
         } else {
           // No v2 — check for a legacy v1 blob and migrate if present.
           const rawV1 = await AsyncStorage.getItem(STORAGE_KEY_V1);
@@ -256,6 +325,131 @@ export function BudgetProvider({ children }: { children: React.ReactNode }) {
     setBlob((prev) => ({ ...prev, currency: code }));
   }, []);
 
+  // ─── Categories ───────────────────────────────────────────────────────────
+  const patchCategories = (prev: BudgetBlob, categories: CategoryDef[]): BudgetBlob => ({
+    ...prev,
+    current: { ...prev.current, plan: { ...prev.current.plan, categories } },
+  });
+
+  const setCategories = useCallback((categories: CategoryDef[]) => {
+    setBlob((prev) => patchCategories(prev, categories));
+  }, []);
+
+  const addCategory = useCallback(() => {
+    setBlob((prev) => {
+      const cats = prev.current.plan.categories;
+      if (cats.length >= MAX_CATEGORIES) return prev;
+      return patchCategories(prev, [
+        ...cats,
+        { id: newCategoryId(), name: '', color: nextPaletteColor(cats), percent: 0 },
+      ]);
+    });
+  }, []);
+
+  const updateCategory = useCallback((id: string, patch: Partial<CategoryDef>) => {
+    setBlob((prev) =>
+      patchCategories(
+        prev,
+        prev.current.plan.categories.map((c) => (c.id === id ? { ...c, ...patch } : c)),
+      ),
+    );
+  }, []);
+
+  const removeCategory = useCallback((id: string) => {
+    setBlob((prev) => {
+      const cats = prev.current.plan.categories;
+      if (cats.length <= MIN_CATEGORIES) return prev;
+      return patchCategories(prev, normalizeCategoryPercents(cats.filter((c) => c.id !== id)));
+    });
+  }, []);
+
+  const markWalkthroughSeen = useCallback(() => {
+    setBlob((prev) => (prev.walkthroughSeen ? prev : { ...prev, walkthroughSeen: true }));
+  }, []);
+
+  const togglePrivacyMode = useCallback(() => {
+    setBlob((prev) => ({ ...prev, privacyMode: !prev.privacyMode }));
+  }, []);
+
+  const [splashHidden, setSplashHidden] = useState(false);
+  const markSplashHidden = useCallback(() => setSplashHidden(true), []);
+
+  // ─── Recurring rules ──────────────────────────────────────────────────────
+  const addRecurring = useCallback(
+    (rule: Omit<RecurringTransaction, 'id' | 'createdAt'>) => {
+      // If the user creates a rule for a day already past in the current
+      // month, mark it as already-fired-this-month so it doesn't backfire
+      // immediately. Rule activates from the next cycle onward.
+      const now = new Date();
+      const todayDay = now.getUTCDate();
+      const currentMonthKey = `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, '0')}`;
+      const alreadyPast = todayDay >= rule.dayOfMonth;
+      const full: RecurringTransaction = {
+        ...rule,
+        lastGeneratedMonth: alreadyPast ? currentMonthKey : rule.lastGeneratedMonth,
+        id: `rec-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        createdAt: now.toISOString(),
+      };
+      setBlob((prev) => ({ ...prev, recurring: [...prev.recurring, full] }));
+    },
+    [],
+  );
+
+  const updateRecurring = useCallback(
+    (id: string, patch: Partial<RecurringTransaction>) => {
+      setBlob((prev) => ({
+        ...prev,
+        recurring: prev.recurring.map((r) => (r.id === id ? { ...r, ...patch } : r)),
+      }));
+    },
+    [],
+  );
+
+  const removeRecurring = useCallback((id: string) => {
+    setBlob((prev) => ({
+      ...prev,
+      recurring: prev.recurring.filter((r) => r.id !== id),
+    }));
+  }, []);
+
+  // ─── Reminders ────────────────────────────────────────────────────────────
+  const reminderTimes = useMemo(
+    () => normalizeReminderTimes(blob.reminderTimes ?? defaultReminderTimes()),
+    [blob.reminderTimes],
+  );
+  const [notificationsGranted, setNotificationsGranted] = useState(false);
+
+  const setReminderTimes = useCallback((times: ReminderTime[]) => {
+    const normalized = normalizeReminderTimes(times);
+    setBlob((prev) => ({ ...prev, reminderTimes: normalized }));
+    // Reschedule immediately (best-effort; the launch effect also covers this,
+    // but this makes the change feel instant).
+    getNotificationsGranted().then((granted) => {
+      if (granted) scheduleAllReminders(normalized).catch(() => {});
+    });
+  }, []);
+
+  // Reminders are on by default. Once setup is done, request permission (once)
+  // and schedule at the chosen times — and re-schedule on every launch and time
+  // change, since the OS can drop scheduled notifications after reboots/updates.
+  useEffect(() => {
+    if (!isHydrated || !blob.setupComplete) return;
+    let cancelled = false;
+    (async () => {
+      const granted = await requestNotificationPermission().catch(() => false);
+      if (cancelled) return;
+      setNotificationsGranted(granted);
+      if (granted) {
+        await scheduleAllReminders(reminderTimes).catch((e) => {
+          console.warn('[reminders] schedule on launch failed:', e);
+        });
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [isHydrated, blob.setupComplete, reminderTimes]);
+
   // ─── Month close ──────────────────────────────────────────────────────────
   const [monthCloseBannerDismissed, setBannerDismissed] = useState(false);
   const dismissMonthCloseBanner = useCallback(() => setBannerDismissed(true), []);
@@ -303,6 +497,24 @@ export function BudgetProvider({ children }: { children: React.ReactNode }) {
       findTransaction,
       setPlan,
       setCurrency,
+      categories: blob.current.plan.categories,
+      setCategories,
+      addCategory,
+      updateCategory,
+      removeCategory,
+      walkthroughSeen: !!blob.walkthroughSeen,
+      markWalkthroughSeen,
+      privacyMode: !!blob.privacyMode,
+      togglePrivacyMode,
+      splashHidden,
+      markSplashHidden,
+      recurring: blob.recurring,
+      addRecurring,
+      updateRecurring,
+      removeRecurring,
+      reminderTimes,
+      setReminderTimes,
+      notificationsGranted,
       closeMonth,
       monthCloseBannerDismissed,
       dismissMonthCloseBanner,
@@ -324,6 +536,20 @@ export function BudgetProvider({ children }: { children: React.ReactNode }) {
       findTransaction,
       setPlan,
       setCurrency,
+      setCategories,
+      addCategory,
+      updateCategory,
+      removeCategory,
+      markWalkthroughSeen,
+      togglePrivacyMode,
+      splashHidden,
+      markSplashHidden,
+      addRecurring,
+      updateRecurring,
+      removeRecurring,
+      reminderTimes,
+      setReminderTimes,
+      notificationsGranted,
       closeMonth,
       monthCloseBannerDismissed,
       dismissMonthCloseBanner,

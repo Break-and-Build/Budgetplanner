@@ -57,6 +57,14 @@ export function CurrencyInput({
     hero: { minHeight: 88, textStyle: t.type.hero, borderless: true, align: 'center' as const },
   }[size];
 
+  // The currency symbol renders one type-step smaller than the digits so it
+  // reads as a prefix, not a competing numeral (matches AmountDisplay).
+  const symbolStyle = {
+    md: t.type.amount, // digits are 17pt — same size is fine at this scale
+    lg: t.type.headline, // 17pt next to 22pt digits
+    hero: { ...t.type.title1, fontWeight: t.fontWeight.medium }, // 28pt next to 56pt digits
+  }[size];
+
   return (
     <View
       style={[
@@ -79,7 +87,7 @@ export function CurrencyInput({
           allowFontScaling
           maxFontSizeMultiplier={t.a11y.maxFontScale}
           style={[
-            cfg.textStyle,
+            symbolStyle,
             {
               color: value > 0 ? t.color.text.primary : t.color.text.tertiary,
               marginRight: size === 'hero' ? t.space[2] : t.space[1],
@@ -109,7 +117,10 @@ export function CurrencyInput({
             flex: cfg.align === 'center' ? 0 : 1,
             paddingVertical: 0,
             textAlign: cfg.align,
-            minWidth: size === 'hero' ? 120 : undefined,
+            // Small floor so the empty "0" is still tappable; the input grows
+            // with content. 120 here previously created a huge symbol↔digit gap
+            // because the centered placeholder floated in the middle of it.
+            minWidth: size === 'hero' ? 48 : undefined,
           },
         ]}
       />

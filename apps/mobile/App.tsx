@@ -18,18 +18,36 @@
  */
 
 import 'react-native-gesture-handler';
-import React from 'react';
+import React, { useEffect } from 'react';
 import { StatusBar } from 'expo-status-bar';
+import * as SplashScreen from 'expo-splash-screen';
+import {
+  useFonts,
+  Poppins_400Regular,
+  Poppins_500Medium,
+  Poppins_600SemiBold,
+  Poppins_700Bold,
+} from '@expo-google-fonts/poppins';
 import { StyleSheet, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { NavigationContainer, DefaultTheme } from '@react-navigation/native';
+
+// Keep the native splash visible until we explicitly hide it. Must be called
+// at module load — before any component renders — so the native splash
+// doesn't dismiss the moment React hands over the first frame.
+const APP_START = Date.now();
+SplashScreen.preventAutoHideAsync().catch(() => {
+  // Already hidden, that's fine.
+});
+/** Minimum total splash time (ms), measured from JS module load. */
+const MIN_SPLASH_MS = 1500;
+import { NavigationContainer, DefaultTheme, DarkTheme } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Home as HomeIcon, ListMinus } from 'lucide-react-native';
 
 import type { RootStackParamList, MainTabsParamList } from './src/types/navigation';
-import { ThemeProvider, useTokens, tokens } from './src/theme';
+import { ThemeProvider, useTokens, useIsDark, tokens } from './src/theme';
 import { BudgetProvider, useBudget } from './src/state/BudgetContext';
 import { HomeScreen } from './src/screens/HomeScreen';
 import { ActivityScreen } from './src/screens/ActivityScreen';
@@ -40,6 +58,11 @@ import { CurrencyPickerScreen } from './src/screens/CurrencyPickerScreen';
 import { MonthClose } from './src/screens/MonthClose';
 import { SettingsScreen } from './src/screens/SettingsScreen';
 import { AdjustPlanScreen } from './src/screens/AdjustPlanScreen';
+import { RecurringListScreen } from './src/screens/RecurringListScreen';
+import { RecurringDetailScreen } from './src/screens/RecurringDetailScreen';
+import { ManageCategoriesScreen } from './src/screens/ManageCategoriesScreen';
+import { AppLockSetupScreen } from './src/screens/AppLockSetupScreen';
+import { AppLockProvider } from './src/state/AppLockContext';
 import { FastLogSheet } from './src/screens/FastLogSheet';
 import { UndoSnackbar } from './src/components/UndoSnackbar';
 
@@ -47,18 +70,22 @@ const RootStack = createNativeStackNavigator<RootStackParamList>();
 const Tabs = createBottomTabNavigator<MainTabsParamList>();
 
 // React Navigation theme — feeds our background color into the gesture-driven
-// chrome (otherwise pushes/pops flash a default off-white).
-const navTheme = {
-  ...DefaultTheme,
-  colors: {
-    ...DefaultTheme.colors,
-    background: tokens.color.bg.base,
-    card: tokens.color.bg.elevated,
-    text: tokens.color.text.primary,
-    border: 'rgba(60, 60, 67, 0.12)',
-    primary: tokens.color.text.primary,
-  },
-};
+// chrome (otherwise pushes/pops flash a default off-white). Built from the
+// active tokens so dark mode doesn't flash a light card on every push.
+function makeNavTheme(t: typeof tokens, isDark: boolean) {
+  const base = isDark ? DarkTheme : DefaultTheme;
+  return {
+    ...base,
+    colors: {
+      ...base.colors,
+      background: t.color.bg.base,
+      card: t.color.bg.elevated,
+      text: t.color.text.primary,
+      border: t.color.border.hairline,
+      primary: t.color.text.primary,
+    },
+  };
+}
 
 function MainTabs() {
   const t = useTokens();
@@ -115,13 +142,34 @@ function MainTabs() {
   );
 }
 
-function Root() {
-  const { isHydrated, blob } = useBudget();
+function Root({ fontsLoaded }: { fontsLoaded: boolean }) {
+  const { isHydrated, blob, markSplashHidden } = useBudget();
+  const t = useTokens();
+  const isDark = useIsDark();
 
-  // Wait for AsyncStorage hydration before mounting the navigator. Showing a
-  // splash here prevents a flash of the wrong initial route (FirstRun vs.
-  // MainTabs) before we know whether setup has been completed.
-  if (!isHydrated) {
+  // Hide the native splash once BOTH font loading and AsyncStorage hydration
+  // have finished, but never before the minimum total splash time has elapsed.
+  // Gives the brand a beat to register without feeling like a stall.
+  useEffect(() => {
+    if (!isHydrated || !fontsLoaded) return;
+    const elapsed = Date.now() - APP_START;
+    const remaining = Math.max(0, MIN_SPLASH_MS - elapsed);
+    const id = setTimeout(() => {
+      // Signal splashHidden only after hideAsync settles, so the first-run tour
+      // never opens its Modal while the splash is still up (which would keep the
+      // splash from dismissing on iOS).
+      SplashScreen.hideAsync()
+        .catch(() => {})
+        .finally(() => markSplashHidden());
+    }, remaining);
+    return () => clearTimeout(id);
+  }, [isHydrated, fontsLoaded, markSplashHidden]);
+
+  // While hydrating or loading fonts, render an empty pane in the brand
+  // background color. The native splash is still up — this is just so React
+  // has a mounted tree ready behind it. Once fonts arrive, any text rendered
+  // here would use Poppins; pre-load there's nothing to render anyway.
+  if (!isHydrated || !fontsLoaded) {
     return <Splash />;
   }
 
@@ -130,13 +178,13 @@ function Root() {
   const initialRouteName = blob.setupComplete ? 'MainTabs' : 'FirstRun';
 
   return (
-    <NavigationContainer theme={navTheme}>
-      <StatusBar style="dark" />
+    <NavigationContainer theme={makeNavTheme(t, isDark)}>
+      <StatusBar style={isDark ? 'light' : 'dark'} />
       <RootStack.Navigator
         initialRouteName={initialRouteName}
         screenOptions={{
           headerShown: false,
-          contentStyle: { backgroundColor: tokens.color.bg.base },
+          contentStyle: { backgroundColor: t.color.bg.base },
         }}
       >
         <RootStack.Screen name="MainTabs" component={MainTabs} />
@@ -174,28 +222,51 @@ function Root() {
             headerShown: false,
           }}
         />
+        <RootStack.Screen name="RecurringList" component={RecurringListScreen} />
+        <RootStack.Screen name="RecurringDetail" component={RecurringDetailScreen} />
+        <RootStack.Screen name="ManageCategories" component={ManageCategoriesScreen} />
+        <RootStack.Screen name="AppLockSetup" component={AppLockSetupScreen} />
       </RootStack.Navigator>
     </NavigationContainer>
   );
 }
 
 export default function App() {
+  // Poppins is loaded here at the App root so it's ready before any screen
+  // renders. Splash stays up until BOTH fonts and hydration complete (see
+  // Root). useFonts handles caching across reloads — subsequent launches
+  // resolve nearly instantly.
+  const [fontsLoaded] = useFonts({
+    Poppins_400Regular,
+    Poppins_500Medium,
+    Poppins_600SemiBold,
+    Poppins_700Bold,
+  });
+
   return (
     <SafeAreaProvider>
-      <ThemeProvider colorScheme="light">
-        <BudgetProvider>
-          <View style={styles.root}>
-            <Root />
-            {/* Global UI — sits above the navigator so it's available from
-                every screen via openFastLog() / showUndoSnackbar() in
-                BudgetContext. */}
-            <FastLogSheet />
-            <UndoSnackbar />
-          </View>
-        </BudgetProvider>
+      <ThemeProvider>
+        <AppLockProvider>
+          <BudgetProvider>
+            <ThemedRoot>
+              <Root fontsLoaded={fontsLoaded} />
+              {/* Global UI — sits above the navigator so it's available from
+                  every screen via openFastLog() / showUndoSnackbar() in
+                  BudgetContext. */}
+              <FastLogSheet />
+              <UndoSnackbar />
+            </ThemedRoot>
+          </BudgetProvider>
+        </AppLockProvider>
       </ThemeProvider>
     </SafeAreaProvider>
   );
+}
+
+/** Full-bleed app background that follows the active theme. */
+function ThemedRoot({ children }: { children: React.ReactNode }) {
+  const t = useTokens();
+  return <View style={{ flex: 1, backgroundColor: t.color.bg.base }}>{children}</View>;
 }
 
 // Tiny splash while AsyncStorage hydrates. The Expo native splash covers the
@@ -203,12 +274,6 @@ export default function App() {
 // on a real device). Just match the app background — no spinner needed at
 // this duration.
 function Splash() {
-  return <View style={styles.root} />;
+  const t = useTokens();
+  return <View style={{ flex: 1, backgroundColor: t.color.bg.base }} />;
 }
-
-const styles = StyleSheet.create({
-  root: {
-    flex: 1,
-    backgroundColor: tokens.color.bg.base,
-  },
-});

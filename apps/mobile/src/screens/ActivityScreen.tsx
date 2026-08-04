@@ -33,13 +33,14 @@ import type { CategoryId, Transaction } from '@budgetplanner/core';
 
 import { useTokens } from '../theme/ThemeProvider';
 import { TabShell } from '../components/TabShell';
-import { ScreenHeader, HeaderIconButton } from '../components/ScreenHeader';
+import { HeaderIconButton } from '../components/ScreenHeader';
 import { CategoryDot } from '../components/CategoryDot';
 import { DayHeader } from '../components/DayHeader';
 import { TransactionRow } from '../components/TransactionRow';
 import { Input } from '../components/ui/Input';
 import { useBudget } from '../state/BudgetContext';
-import { CATEGORY_IDS, CATEGORY_LABELS } from '../state/categories';
+import { resolveCategory } from '../state/categories';
+import type { CategoryDef } from '@budgetplanner/core';
 import type { RootStackParamList, MainTabsParamList } from '../types/navigation';
 
 type Nav = NativeStackNavigationProp<RootStackParamList> &
@@ -51,6 +52,7 @@ export function ActivityScreen() {
   const t = useTokens();
   const nav = useNavigation<Nav>();
   const { currentMonth, symbol, openFastLog } = useBudget();
+  const categories = currentMonth.plan.categories;
 
   const [filter, setFilter] = useState<FilterValue>('all');
   const [search, setSearch] = useState('');
@@ -129,7 +131,28 @@ export function ActivityScreen() {
   // ─── Render ───────────────────────────────────────────────────────────────
   return (
     <TabShell fab={fab}>
-      <ScreenHeader title="Activity" right={headerRight} />
+      {/* Inline header — title on the left, search icon on the right, same row.
+          (Was using ScreenHeader which stacks the action above the title.) */}
+      <View
+        style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          paddingHorizontal: t.space[4],
+          paddingTop: t.space[2],
+          paddingBottom: t.space[4],
+        }}
+      >
+        <Text
+          allowFontScaling
+          maxFontSizeMultiplier={t.a11y.maxFontScale}
+          accessibilityRole="header"
+          style={[t.type.title1, { color: t.color.text.primary }]}
+        >
+          Activity
+        </Text>
+        {headerRight}
+      </View>
 
       {/* Inline search field — appears below header when search is open */}
       {searchOpen ? (
@@ -145,7 +168,7 @@ export function ActivityScreen() {
       ) : null}
 
       {/* Filter chips — effectively sticky by being outside the SectionList */}
-      <FilterChipRow value={filter} onChange={setFilter} />
+      <FilterChipRow value={filter} onChange={setFilter} categories={categories} />
 
       {/* The list */}
       <SectionList
@@ -161,7 +184,8 @@ export function ActivityScreen() {
             <TransactionRow
               transaction={item}
               symbol={symbol}
-              categoryLabel={CATEGORY_LABELS[item.categoryId]}
+              categoryLabel={resolveCategory(categories, item.categoryId).name}
+              categoryColor={resolveCategory(categories, item.categoryId).color}
               onPress={() => nav.navigate('TransactionDetail', { id: item.id })}
             />
             {index < section.data.length - 1 ? (
@@ -179,6 +203,7 @@ export function ActivityScreen() {
           <EmptyState
             monthHasAny={monthHasAny}
             filter={filter}
+            filterLabel={filter === 'all' ? 'All' : resolveCategory(categories, filter).name}
             search={search}
             onLogPress={openFastLog}
           />
@@ -197,17 +222,19 @@ export function ActivityScreen() {
 function FilterChipRow({
   value,
   onChange,
+  categories,
 }: {
   value: FilterValue;
   onChange: (v: FilterValue) => void;
+  categories: CategoryDef[];
 }) {
   const t = useTokens();
-  const chips: Array<{ value: FilterValue; label: string; categoryId?: CategoryId }> = [
+  const chips: Array<{ value: FilterValue; label: string; color?: string }> = [
     { value: 'all', label: 'All' },
-    ...CATEGORY_IDS.map((id) => ({
-      value: id as FilterValue,
-      label: CATEGORY_LABELS[id],
-      categoryId: id,
+    ...categories.map((c) => ({
+      value: c.id as FilterValue,
+      label: c.name || 'Untitled',
+      color: c.color,
     })),
   ];
   return (
@@ -239,8 +266,10 @@ function FilterChipRow({
                 paddingVertical: t.space[2],
                 borderRadius: t.radii.pill,
                 minHeight: 32,
+                // Selected → light-indigo tinted pill (Coinbase-style segmented).
+                // Unselected → hairline outlined, transparent.
                 backgroundColor: selected
-                  ? t.color.text.primary
+                  ? t.color.brand.tint
                   : pressed
                     ? t.color.bg.sunken
                     : 'transparent',
@@ -249,9 +278,9 @@ function FilterChipRow({
               },
             ]}
           >
-            {chip.categoryId ? (
+            {chip.color ? (
               <CategoryDot
-                category={chip.categoryId}
+                color={chip.color}
                 size={8}
                 style={{ marginRight: t.space[2] }}
               />
@@ -262,7 +291,7 @@ function FilterChipRow({
               style={[
                 t.type.footnote,
                 {
-                  color: selected ? t.color.text.inverse : t.color.text.primary,
+                  color: selected ? t.color.brand.base : t.color.text.primary,
                   fontWeight: selected ? t.fontWeight.semibold : t.fontWeight.medium,
                 },
               ]}
@@ -281,11 +310,13 @@ function FilterChipRow({
 function EmptyState({
   monthHasAny,
   filter,
+  filterLabel,
   search,
   onLogPress,
 }: {
   monthHasAny: boolean;
   filter: FilterValue;
+  filterLabel: string;
   search: string;
   onLogPress: () => void;
 }) {
@@ -299,7 +330,7 @@ function EmptyState({
     primary = `No matches for "${search.trim()}".`;
     secondary = 'Try a different word or amount.';
   } else if (filter !== 'all') {
-    primary = `Nothing here yet in ${CATEGORY_LABELS[filter as CategoryId]}.`;
+    primary = `Nothing here yet in ${filterLabel}.`;
     secondary = monthHasAny ? 'You haven\'t logged anything in this category this month.' : null;
   } else {
     primary = 'No transactions yet.';
@@ -353,7 +384,7 @@ function EmptyState({
             paddingHorizontal: t.space[5],
             paddingVertical: t.space[3],
             borderRadius: t.radii.pill,
-            backgroundColor: pressed ? t.color.fab.pressed : t.color.text.primary,
+            backgroundColor: pressed ? t.color.brand.pressed : t.color.brand.base,
           })}
         >
           <Text

@@ -36,15 +36,16 @@ import {
   calcSavingsTotal,
   calcTotalIncome,
   calcTotalPriorities,
-  defaultSplit,
+  cleanPlan,
+  defaultCategories,
 } from '@budgetplanner/core';
+import type { CategoryDef } from '@budgetplanner/core';
 
 import { useTokens } from '../theme/ThemeProvider';
 import { HeaderIconButton } from '../components/ScreenHeader';
 import { AmountDisplay } from '../components/AmountDisplay';
 import { CategoryDot } from '../components/CategoryDot';
 import { useBudget } from '../state/BudgetContext';
-import { CATEGORY_IDS, CATEGORY_LABELS } from '../state/categories';
 import { IncomeStep } from './setup/IncomeStep';
 import { PrioritiesStep } from './setup/PrioritiesStep';
 import { SavingsStep } from './setup/SavingsStep';
@@ -69,7 +70,10 @@ export function AdjustPlanScreen() {
     income: currentMonth.plan.income,
     priorities: currentMonth.plan.priorities,
     savings: currentMonth.plan.savings,
-    split: currentMonth.plan.split.essentials > 0 ? currentMonth.plan.split : defaultSplit(),
+    categories:
+      currentMonth.plan.categories.length > 0
+        ? currentMonth.plan.categories
+        : defaultCategories(),
   }));
 
   // Which view: the menu, or one of the four sections.
@@ -79,12 +83,12 @@ export function AdjustPlanScreen() {
   );
 
   const save = () => {
-    setPlan({
+    setPlan(cleanPlan({
       income: form.income,
       priorities: form.priorities,
       savings: form.savings,
-      split: form.split,
-    });
+      categories: form.categories,
+    }));
     nav.goBack();
   };
 
@@ -151,14 +155,14 @@ export function AdjustPlanScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: t.color.bg.base, paddingTop: insets.top }}>
-      {/* Header */}
+      {/* Header — bigger title, snug to the top edge */}
       <View
         style={{
           flexDirection: 'row',
           alignItems: 'center',
           paddingHorizontal: t.space[4],
-          paddingTop: t.space[2],
-          paddingBottom: t.space[2],
+          paddingTop: 0,
+          paddingBottom: t.space[3],
           minHeight: t.layout.minTapTarget,
         }}
       >
@@ -168,14 +172,14 @@ export function AdjustPlanScreen() {
           maxFontSizeMultiplier={t.a11y.maxFontScale}
           accessibilityRole="header"
           style={[
-            t.type.headline,
+            t.type.title2,
             { color: t.color.text.primary, flex: 1, textAlign: 'center' },
           ]}
         >
           Adjust plan
         </Text>
         <HeaderIconButton onPress={nav.goBack} accessibilityLabel="Close">
-          <X size={22} color={t.color.text.primary} strokeWidth={1.75} />
+          <X size={24} color={t.color.text.primary} strokeWidth={1.75} />
         </HeaderIconButton>
       </View>
 
@@ -230,7 +234,7 @@ export function AdjustPlanScreen() {
             symbol={symbol}
             onPress={() => setView('savings')}
           />
-          <BucketsCard split={form.split} onPress={() => setView('buckets')} />
+          <BucketsCard categories={form.categories} onPress={() => setView('buckets')} />
         </View>
 
         <Text
@@ -283,7 +287,7 @@ function SectionCard({
         backgroundColor: pressed ? t.color.bg.sunken : t.color.bg.elevated,
         borderRadius: t.radii.lg,
         borderWidth: StyleSheet.hairlineWidth,
-        borderColor: t.color.border.hairline,
+        borderColor: t.color.border.card,
       })}
     >
       <View style={{ flex: 1, minWidth: 0 }}>
@@ -317,10 +321,10 @@ function SectionCard({
 }
 
 function BucketsCard({
-  split,
+  categories,
   onPress,
 }: {
-  split: { essentials: number; growth: number; stability: number; rewards: number };
+  categories: CategoryDef[];
   onPress: () => void;
 }) {
   const t = useTokens();
@@ -335,7 +339,7 @@ function BucketsCard({
         backgroundColor: pressed ? t.color.bg.sunken : t.color.bg.elevated,
         borderRadius: t.radii.lg,
         borderWidth: StyleSheet.hairlineWidth,
-        borderColor: t.color.border.hairline,
+        borderColor: t.color.border.card,
       })}
     >
       <View
@@ -368,21 +372,22 @@ function BucketsCard({
         <ChevronRight size={18} color={t.color.text.tertiary} strokeWidth={1.75} />
       </View>
       <View style={{ gap: t.space[1] }}>
-        {CATEGORY_IDS.map((id) => (
+        {categories.map((c) => (
           <View
-            key={id}
+            key={c.id}
             style={{ flexDirection: 'row', alignItems: 'center' }}
           >
-            <CategoryDot category={id} size={8} style={{ marginRight: t.space[2] }} />
+            <CategoryDot color={c.color} size={8} style={{ marginRight: t.space[2] }} />
             <Text
               allowFontScaling
               maxFontSizeMultiplier={t.a11y.maxFontScale}
+              numberOfLines={1}
               style={[
                 t.type.footnote,
                 { color: t.color.text.secondary, flex: 1 },
               ]}
             >
-              {CATEGORY_LABELS[id]}
+              {c.name || 'Untitled'}
             </Text>
             <Text
               allowFontScaling
@@ -396,7 +401,7 @@ function BucketsCard({
                 },
               ]}
             >
-              {split[id]}%
+              {c.percent}%
             </Text>
           </View>
         ))}

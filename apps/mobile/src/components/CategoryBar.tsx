@@ -1,13 +1,15 @@
 import React, { useEffect, useMemo, useRef } from 'react';
 import { Animated, Easing, Pressable, StyleSheet, Text, View } from 'react-native';
-import type { CategoryId } from '@budgetplanner/core';
-import { useTokens } from '../theme/ThemeProvider';
+import { useIsDark, useTokens } from '../theme/ThemeProvider';
+import { categoryTint } from '../theme/categoryColor';
 import { useReducedMotion } from '../theme/useReducedMotion';
-import { AmountDisplay } from './AmountDisplay';
+import { AmountDisplay, MASK } from './AmountDisplay';
 import { CategoryDot } from './CategoryDot';
+import { useBudget } from '../state/BudgetContext';
 
 interface CategoryBarProps {
-  category: CategoryId;
+  /** The category's accent colour (hex). */
+  color: string;
   /** Category display name. Kept external so copy is consistent with IA. */
   label: string;
   allocated: number;
@@ -27,7 +29,7 @@ interface CategoryBarProps {
  * is the category tint (same hue at ~92% L). Both come from tokens.
  */
 export function CategoryBar({
-  category,
+  color,
   label,
   allocated,
   spent,
@@ -36,6 +38,9 @@ export function CategoryBar({
   onPress,
 }: CategoryBarProps) {
   const t = useTokens();
+  const isDark = useIsDark();
+  const { privacyMode } = useBudget();
+  const tint = categoryTint(color, isDark);
   const { multiplier } = useReducedMotion();
 
   const remaining = allocated - spent;
@@ -99,7 +104,7 @@ export function CategoryBar({
       {/* Top row: dot + label · remaining amount */}
       <View style={styles.headerRow}>
         <View style={styles.headerLeft}>
-          <CategoryDot category={category} style={{ marginRight: t.space[2] }} />
+          <CategoryDot color={color} style={{ marginRight: t.space[2] }} />
           <Text
             allowFontScaling
             maxFontSizeMultiplier={t.a11y.maxFontScale}
@@ -127,7 +132,7 @@ export function CategoryBar({
           styles.track,
           {
             height: barHeight,
-            backgroundColor: t.color.category[category].tint,
+            backgroundColor: tint,
             borderRadius: barHeight / 2,
             marginTop: t.space[2],
           },
@@ -137,7 +142,7 @@ export function CategoryBar({
           style={{
             height: '100%',
             borderRadius: barHeight / 2,
-            backgroundColor: t.color.category[category].base,
+            backgroundColor: color,
             width: widthAnim.interpolate({
               inputRange: [0, 1],
               outputRange: ['0%', '100%'],
@@ -153,9 +158,9 @@ export function CategoryBar({
           maxFontSizeMultiplier={t.a11y.maxFontScale}
           style={[t.type.footnote, { color: t.color.text.secondary }]}
         >
-          {symbol}
-          {spent.toLocaleString('en-US')} of {symbol}
-          {allocated.toLocaleString('en-US')}
+          {privacyMode
+            ? `${symbol}${MASK} of ${symbol}${MASK}`
+            : `${symbol}${spent.toLocaleString('en-US')} of ${symbol}${allocated.toLocaleString('en-US')}`}
         </Text>
         {over ? (
           <Text
@@ -169,8 +174,7 @@ export function CategoryBar({
               },
             ]}
           >
-            {symbol}
-            {Math.abs(remaining).toLocaleString('en-US')} over
+            {privacyMode ? `${symbol}${MASK} over` : `${symbol}${Math.abs(remaining).toLocaleString('en-US')} over`}
           </Text>
         ) : null}
       </View>

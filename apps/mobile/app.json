@@ -1,32 +1,70 @@
 {
   "expo": {
-    "name": "Budget Planner",
+    "name": "Budget Tracker",
     "slug": "budgetplanner-mobile",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
-    "splash": {
-      "image": "./assets/splash.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
-    },
+    "userInterfaceStyle": "automatic",
+    "scheme": "budgettracker",
+    "platforms": [
+      "ios",
+      "android",
+      "web"
+    ],
     "assetBundlePatterns": [
       "**/*"
     ],
     "ios": {
-      "supportsTablet": true,
-      "bundleIdentifier": "com.budgetplanner.mobile"
+      "supportsTablet": false,
+      "bundleIdentifier": "com.breakandbuild.budgettracker",
+      "icon": "./assets/AppIcon.icon",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSFaceIDUsageDescription": "Budget Tracker uses Face ID to unlock the app so only you can see your budget."
+      }
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
+        "backgroundColor": "#5046E6"
       },
-      "package": "com.budgetplanner.mobile"
+      "package": "com.breakandbuild.budgettracker"
     },
     "web": {
       "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 380,
+          "backgroundColor": "#FFFFFF",
+          "resizeMode": "contain",
+          "dark": {
+            "image": "./assets/splash-icon-dark.png",
+            "imageWidth": 380,
+            "backgroundColor": "#121214",
+            "resizeMode": "contain"
+          }
+        }
+      ],
+      "expo-font",
+      "@react-native-community/datetimepicker",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/notification-icon.png",
+          "color": "#5046E6"
+        }
+      ],
+      "expo-secure-store"
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "0cd14482-2c84-437c-83ec-fa8c9fba2442"
+      }
     }
   }
 }

@@ -29,9 +29,14 @@ export function IncomeStep({ step, totalSteps, mode = 'create', form, setForm, o
     [form.income],
   );
 
+  // A completely blank row (no name AND no amount) is ignored — it neither
+  // blocks Continue nor gets saved. A partial row (name but no amount, say)
+  // still blocks so the user finishes or clears it. This stops the confusing
+  // "phantom ₦0 row" from freezing the flow (tester feedback). Blank rows are
+  // stripped centrally at save time in SetupRitual / AdjustPlan.
+  const nonEmpty = form.income.filter((i) => i.name.trim() || i.amount > 0);
   const valid =
-    form.income.length > 0 &&
-    form.income.every((i) => i.name.trim() && i.amount > 0);
+    nonEmpty.length > 0 && nonEmpty.every((i) => i.name.trim() && i.amount > 0);
 
   const addRow = () =>
     setForm((f) => ({

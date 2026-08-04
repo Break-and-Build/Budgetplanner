@@ -33,6 +33,15 @@ export type RootStackParamList = {
   TransactionDetail: { id: string };
   AdjustPlan: { focus?: 'income' | 'priorities' | 'savings' | 'buckets' } | undefined;
   Settings: undefined;
+
+  /** List of recurring transaction rules (subscriptions). */
+  RecurringList: undefined;
+  /** Add or edit a single recurring rule. Pass `id: 'new'` to create. */
+  RecurringDetail: { id: string };
+  /** Manage the plan's spending categories. */
+  ManageCategories: undefined;
+  /** Create/confirm a PIN to enable the app lock, or change an existing PIN. */
+  AppLockSetup: { mode?: 'enable' | 'change' } | undefined;
 };
 
 declare global {

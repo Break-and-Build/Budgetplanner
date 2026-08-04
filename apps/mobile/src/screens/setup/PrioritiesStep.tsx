@@ -30,10 +30,12 @@ export function PrioritiesStep({ step, totalSteps, mode = 'create', form, setFor
     [form.priorities],
   );
 
-  // Step is "valid" if every row is complete (or there are none — user
-  // explicitly opted to skip via the tertiary action).
-  const valid = form.priorities.every((p) => p.name.trim() && p.amount > 0);
-  const hasNone = form.priorities.length === 0;
+  // Blank rows (no name AND no amount) are ignored so a phantom ₦0 row can't
+  // block Continue. Priorities can legitimately be empty (skip), so there's
+  // no minimum — just no half-filled rows. Blanks are stripped at save time.
+  const nonEmpty = form.priorities.filter((p) => p.name.trim() || p.amount > 0);
+  const valid = nonEmpty.every((p) => p.name.trim() && p.amount > 0);
+  const hasNone = nonEmpty.length === 0;
 
   const addRow = () =>
     setForm((f) => ({
