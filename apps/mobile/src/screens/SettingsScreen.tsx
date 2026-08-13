@@ -40,7 +40,7 @@ import type { RootStackParamList } from '../types/navigation';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 
-const APP_VERSION = '1.0.0';
+const APP_VERSION = '1.1.0';
 const APP_TAGLINE = "A calm budget that learns your month.";
 
 export function SettingsScreen() {
