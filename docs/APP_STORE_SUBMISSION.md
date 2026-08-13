@@ -20,7 +20,7 @@ Build to submit: **1.0.0 (8)**.
 
 | Field | Value |
 |---|---|
-| Name (30) | `Budget Tracker - Safe to Spend` |
+| Name (30) | `Budget Tracker: Safe to Spend` |
 | Subtitle (30) | `Log expenses in seconds` |
 | Primary category | **Finance** |
 | Secondary category | *(leave empty)* |
