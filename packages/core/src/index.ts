@@ -68,6 +68,9 @@ export {
 // Recurring transaction rules
 export { shouldFireRule, materializeRule, runRecurringRules } from './recurring';
 
+// Amount-field expression evaluator
+export { evaluateExpression, looksLikeExpression } from './expression';
+
 // Reminder-time helpers
 export {
   MAX_REMINDER_TIMES,

@@ -28,7 +28,7 @@ import { ChevronRight, Trash2, X } from 'lucide-react-native';
 import { getCurrency, MAX_REMINDER_TIMES } from '@budgetplanner/core';
 import type { ReminderTime } from '@budgetplanner/core';
 
-import { useTokens } from '../theme/ThemeProvider';
+import { useTokens, useThemePreference, type ThemePreference } from '../theme/ThemeProvider';
 import { HeaderIconButton } from '../components/ScreenHeader';
 import { BottomSheet } from '../components/BottomSheet';
 import { Button } from '../components/ui/Button';
@@ -69,6 +69,8 @@ export function SettingsScreen() {
   React.useEffect(() => {
     biometricAvailable().then(setBioAvailable);
   }, []);
+
+  const { preference: themePref, setPreference: setThemePref } = useThemePreference();
 
   const currentCurrency = getCurrency(blob.currency);
 
@@ -299,6 +301,27 @@ export function SettingsScreen() {
               <Row label="Turn off app lock" destructive onPress={() => disableLock()} />
             </>
           )}
+        </Card>
+
+        {/* ─── Appearance ───────────────────────────────────────────────── */}
+        <SectionLabel>Appearance</SectionLabel>
+        <Card>
+          <View
+            style={{
+              paddingHorizontal: t.space[4],
+              paddingVertical: t.space[3],
+              minHeight: 56,
+            }}
+          >
+            <Text
+              allowFontScaling
+              maxFontSizeMultiplier={t.a11y.maxFontScale}
+              style={[t.type.body, { color: t.color.text.primary, marginBottom: t.space[3] }]}
+            >
+              Theme
+            </Text>
+            <ThemeSegmented value={themePref} onChange={setThemePref} />
+          </View>
         </Card>
 
         {/* ─── Reset ────────────────────────────────────────────────────── */}
@@ -564,5 +587,71 @@ function Row({ label, sublabel, value, onPress, destructive }: RowProps) {
         <ChevronRight size={18} color={t.color.text.tertiary} strokeWidth={1.75} />
       ) : null}
     </Container>
+  );
+}
+
+// ─── Theme segmented ─────────────────────────────────────────────────────────
+// Three-segment picker: System · Light · Dark. Matches the pill treatment
+// used on the ₦/% toggle so the visual language stays consistent.
+
+function ThemeSegmented({
+  value,
+  onChange,
+}: {
+  value: ThemePreference;
+  onChange: (next: ThemePreference) => void;
+}) {
+  const t = useTokens();
+  const options: Array<{ key: ThemePreference; label: string }> = [
+    { key: 'system', label: 'System' },
+    { key: 'light', label: 'Light' },
+    { key: 'dark', label: 'Dark' },
+  ];
+  return (
+    <View
+      style={{
+        flexDirection: 'row',
+        alignItems: 'stretch',
+        height: 44,
+        backgroundColor: t.color.bg.sunken,
+        borderRadius: t.radii.md,
+        padding: 2,
+      }}
+    >
+      {options.map((opt) => {
+        const selected = value === opt.key;
+        return (
+          <Pressable
+            key={opt.key}
+            onPress={() => onChange(opt.key)}
+            accessibilityRole="button"
+            accessibilityLabel={`${opt.label} theme`}
+            accessibilityState={{ selected }}
+            style={{
+              flex: 1,
+              alignItems: 'center',
+              justifyContent: 'center',
+              borderRadius: t.radii.md - 2,
+              backgroundColor: selected ? t.color.bg.elevated : 'transparent',
+              ...(selected ? t.shadow.xs : {}),
+            }}
+          >
+            <Text
+              allowFontScaling
+              maxFontSizeMultiplier={t.a11y.maxFontScale}
+              style={[
+                t.type.subhead,
+                {
+                  color: selected ? t.color.text.primary : t.color.text.secondary,
+                  fontWeight: selected ? t.fontWeight.semibold : t.fontWeight.regular,
+                },
+              ]}
+            >
+              {opt.label}
+            </Text>
+          </Pressable>
+        );
+      })}
+    </View>
   );
 }

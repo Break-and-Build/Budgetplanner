@@ -1,13 +1,19 @@
 import React from 'react';
 import {
+  Platform,
+  StyleSheet,
+  Text,
   TextInput,
   View,
-  Text,
-  StyleSheet,
   type StyleProp,
   type ViewStyle,
 } from 'react-native';
-import { formatNumber, parseNumber } from '@budgetplanner/core';
+import {
+  evaluateExpression,
+  formatNumber,
+  looksLikeExpression,
+  parseNumber,
+} from '@budgetplanner/core';
 import { useTokens } from '../theme/ThemeProvider';
 
 type Size = 'md' | 'lg' | 'hero';
@@ -36,7 +42,15 @@ interface CurrencyInputProps {
  *  - md/lg sit in a bordered sunken well like other Inputs.
  *  - hero is borderless, centered, used only on FastLogSheet.
  *
- * Always uses the number-pad keyboard and tabular-nums type variant.
+ * Tolerates two things the phone keyboard makes awkward:
+ *   • decimals — `104.50` is preserved as typed (previously the value round-
+ *     tripped through `parseFloat` on every keystroke, so a trailing `.` or
+ *     `.50` was lost the moment the user typed it)
+ *   • expressions — `1000+800` on blur evaluates to `1800`
+ *
+ * To make both work we hold a local `draft` string while focused, and only
+ * commit a plain-number draft to `onChange` live. Expression drafts commit on
+ * blur; if the expression is invalid we snap back to the last valid value.
  */
 export function CurrencyInput({
   value,
@@ -50,6 +64,7 @@ export function CurrencyInput({
 }: CurrencyInputProps) {
   const t = useTokens();
   const [focused, setFocused] = React.useState(false);
+  const [draft, setDraft] = React.useState<string>('');
 
   const cfg = {
     md: { minHeight: 48, textStyle: t.type.amount, borderless: false, align: 'left' as const },
@@ -57,13 +72,57 @@ export function CurrencyInput({
     hero: { minHeight: 88, textStyle: t.type.hero, borderless: true, align: 'center' as const },
   }[size];
 
-  // The currency symbol renders one type-step smaller than the digits so it
-  // reads as a prefix, not a competing numeral (matches AmountDisplay).
   const symbolStyle = {
-    md: t.type.amount, // digits are 17pt — same size is fine at this scale
-    lg: t.type.headline, // 17pt next to 22pt digits
-    hero: { ...t.type.title1, fontWeight: t.fontWeight.medium }, // 28pt next to 56pt digits
+    md: t.type.amount,
+    lg: t.type.headline,
+    hero: { ...t.type.title1, fontWeight: t.fontWeight.medium },
   }[size];
+
+  // iOS `decimal-pad` / `numeric` have no operator keys, so users can't type
+  // `+` for expressions. `numbers-and-punctuation` gives them digits, `.`, `+`,
+  // `-`, `*`, `/`. Android's default `numeric` pad already covers these.
+  const keyboardType = Platform.OS === 'ios' ? 'numbers-and-punctuation' : 'numeric';
+
+  // What we show in the input:
+  //  - unfocused: the canonical formatted number (`1,500.5`)
+  //  - focused:   the raw draft the user is typing, unformatted
+  const displayed = focused ? draft : formatNumber(value);
+
+  const onFocus = () => {
+    // Seed the draft with the current value in a shape that's easy to edit.
+    setDraft(value ? String(value) : '');
+    setFocused(true);
+  };
+
+  const onBlur = () => {
+    setFocused(false);
+    commit(draft);
+  };
+
+  const onChangeText = (text: string) => {
+    setDraft(text);
+    // Live-update only when it's a plain number — otherwise wait for blur, so
+    // typing an operator mid-expression doesn't clobber the value.
+    if (!looksLikeExpression(text)) {
+      onChange(parseNumber(text));
+    }
+  };
+
+  const commit = (text: string) => {
+    if (!text.trim()) {
+      onChange(0);
+      return;
+    }
+    if (looksLikeExpression(text)) {
+      const result = evaluateExpression(text);
+      if (result != null) {
+        onChange(result);
+      }
+      // Invalid expression → keep the previous value (don't wipe user's data).
+      return;
+    }
+    onChange(parseNumber(text));
+  };
 
   return (
     <View
@@ -77,7 +136,7 @@ export function CurrencyInput({
           backgroundColor: cfg.borderless ? 'transparent' : t.color.bg.sunken,
           borderRadius: cfg.borderless ? 0 : t.radii.md,
           borderWidth: cfg.borderless ? 0 : focused ? 1.5 : StyleSheet.hairlineWidth,
-          borderColor: focused ? t.color.border.focus : t.color.border.hairline,
+          borderColor: focused ? t.color.border.focus : t.color.border.card,
         },
         containerStyle,
       ]}
@@ -98,17 +157,18 @@ export function CurrencyInput({
         </Text>
       ) : null}
       <TextInput
-        value={formatNumber(value)}
-        onChangeText={(text) => onChange(parseNumber(text))}
+        value={displayed}
+        onChangeText={onChangeText}
         placeholder={placeholder}
         placeholderTextColor={t.color.text.tertiary}
-        keyboardType="numeric"
+        keyboardType={keyboardType}
         autoFocus={autoFocus}
         accessibilityLabel={accessibilityLabel ?? 'Amount'}
+        accessibilityHint="You can type an expression like 1000+800"
         allowFontScaling
         maxFontSizeMultiplier={t.a11y.maxFontScale}
-        onFocus={() => setFocused(true)}
-        onBlur={() => setFocused(false)}
+        onFocus={onFocus}
+        onBlur={onBlur}
         selectTextOnFocus
         style={[
           cfg.textStyle,
@@ -117,9 +177,6 @@ export function CurrencyInput({
             flex: cfg.align === 'center' ? 0 : 1,
             paddingVertical: 0,
             textAlign: cfg.align,
-            // Small floor so the empty "0" is still tappable; the input grows
-            // with content. 120 here previously created a huge symbol↔digit gap
-            // because the centered placeholder floated in the middle of it.
             minWidth: size === 'hero' ? 48 : undefined,
           },
         ]}
