@@ -163,13 +163,13 @@ export function SettingsScreen() {
         <Card>
           <Row
             label="Categories"
-            sublabel="Rename, recolour, and set each category's share."
+            sublabel="Rename, recolour and set each share."
             onPress={() => nav.navigate('ManageCategories')}
           />
           <Divider />
           <Row
             label="Recurring"
-            sublabel="Subscriptions and monthly auto-logs."
+            sublabel="Subscriptions and monthly bills."
             onPress={() => nav.navigate('RecurringList')}
           />
         </Card>
@@ -251,8 +251,8 @@ export function SettingsScreen() {
           ]}
         >
           {notificationsGranted
-            ? 'Add up to five times a day — morning, midday, evening. Plus a reminder on the 28th to close out the month. Turn reminders off in your device Settings.'
-            : 'Notifications are turned off. Enable them for Budget Tracker in your device Settings to get reminders.'}
+            ? 'Up to five a day. Plus a nudge on the 28th to close out the month. Turn them off in your device settings.'
+            : 'Notifications are turned off. Enable them for Budget Tracker in your device settings.'}
         </Text>
 
         {/* ─── Privacy & security ───────────────────────────────────────── */}
@@ -261,7 +261,7 @@ export function SettingsScreen() {
           {!lockEnabled ? (
             <Row
               label="App lock"
-              sublabel="Require a PIN (or Face ID) to open the app."
+              sublabel="PIN or biometrics to open."
               value="Off"
               onPress={() => nav.navigate('AppLockSetup', { mode: 'enable' })}
             />
@@ -306,20 +306,7 @@ export function SettingsScreen() {
         {/* ─── Appearance ───────────────────────────────────────────────── */}
         <SectionLabel>Appearance</SectionLabel>
         <Card>
-          <View
-            style={{
-              paddingHorizontal: t.space[4],
-              paddingVertical: t.space[3],
-              minHeight: 56,
-            }}
-          >
-            <Text
-              allowFontScaling
-              maxFontSizeMultiplier={t.a11y.maxFontScale}
-              style={[t.type.body, { color: t.color.text.primary, marginBottom: t.space[3] }]}
-            >
-              Theme
-            </Text>
+          <View style={{ paddingHorizontal: t.space[3], paddingVertical: t.space[3] }}>
             <ThemeSegmented value={themePref} onChange={setThemePref} />
           </View>
         </Card>
@@ -342,38 +329,53 @@ export function SettingsScreen() {
           />
         </Card>
 
-        {/* ─── About ────────────────────────────────────────────────────── */}
-        <SectionLabel>About</SectionLabel>
-        <Card>
-          <Row label="Version" value={APP_VERSION} />
-          <Divider />
-          <Row label="What this is" sublabel={APP_TAGLINE} />
-        </Card>
-
-        <Text
-          allowFontScaling
-          maxFontSizeMultiplier={t.a11y.maxFontScale}
-          style={[
-            t.type.caption1,
-            {
-              color: t.color.text.tertiary,
-              textAlign: 'center',
-              paddingHorizontal: t.space[6],
-              paddingTop: t.space[6],
-              lineHeight: 18,
-            },
-          ]}
-        >
-          Your data lives only on this device.{'\n'}
-          Built with React Native + Expo. Icons by{' '}
+        {/* ─── About footer — no card, no section label; the app speaks for
+             itself once you've got this far. */}
+        <View style={{ alignItems: 'center', paddingHorizontal: t.space[6], paddingTop: t.space[8] }}>
           <Text
-            onPress={() => Linking.openURL('https://lucide.dev').catch(() => {})}
-            style={{ color: t.color.text.secondary }}
+            allowFontScaling
+            maxFontSizeMultiplier={t.a11y.maxFontScale}
+            style={[
+              t.type.subhead,
+              { color: t.color.text.primary, fontWeight: t.fontWeight.medium, textAlign: 'center' },
+            ]}
           >
-            Lucide
+            Budget Tracker
           </Text>
-          .
-        </Text>
+          <Text
+            allowFontScaling
+            maxFontSizeMultiplier={t.a11y.maxFontScale}
+            style={[
+              t.type.footnote,
+              { color: t.color.text.secondary, textAlign: 'center', marginTop: 2 },
+            ]}
+          >
+            {APP_TAGLINE}
+          </Text>
+          <Text
+            allowFontScaling
+            maxFontSizeMultiplier={t.a11y.maxFontScale}
+            style={[
+              t.type.caption1,
+              {
+                color: t.color.text.tertiary,
+                textAlign: 'center',
+                marginTop: t.space[3],
+                lineHeight: 18,
+              },
+            ]}
+          >
+            Version {APP_VERSION} · Your data lives only on this device.{'\n'}
+            Icons by{' '}
+            <Text
+              onPress={() => Linking.openURL('https://lucide.dev').catch(() => {})}
+              style={{ color: t.color.text.secondary }}
+            >
+              Lucide
+            </Text>
+            .
+          </Text>
+        </View>
       </ScrollView>
 
       {/* Reset-current-month confirmation */}
@@ -453,6 +455,8 @@ export function SettingsScreen() {
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
   const t = useTokens();
+  // Quieter than the previous secondary/caption2 treatment — a subdued label
+  // that anchors the section without competing with the row content.
   return (
     <Text
       allowFontScaling
@@ -460,10 +464,12 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
       style={[
         t.type.caption2,
         {
-          color: t.color.text.secondary,
+          color: t.color.text.tertiary,
           textTransform: 'uppercase',
-          paddingHorizontal: t.space[4],
-          paddingTop: t.space[5],
+          letterSpacing: 0.8,
+          fontWeight: t.fontWeight.medium,
+          paddingHorizontal: t.space[5],
+          paddingTop: t.space[6],
           paddingBottom: t.space[2],
         },
       ]}
