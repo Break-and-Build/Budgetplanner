@@ -43,6 +43,17 @@ type Nav = NativeStackNavigationProp<RootStackParamList>;
 const APP_VERSION = '1.1.1';
 const APP_TAGLINE = "A calm budget that learns your month.";
 
+const THEME_LABELS: Record<ThemePreference, string> = {
+  system: 'System',
+  light: 'Light',
+  dark: 'Dark',
+};
+const THEME_OPTIONS: Array<{ key: ThemePreference; label: string; hint: string }> = [
+  { key: 'system', label: 'System', hint: 'Follow your device' },
+  { key: 'light', label: 'Light', hint: 'Always light' },
+  { key: 'dark', label: 'Dark', hint: 'Always dark' },
+];
+
 export function SettingsScreen() {
   const t = useTokens();
   const nav = useNavigation<Nav>();
@@ -71,6 +82,7 @@ export function SettingsScreen() {
   }, []);
 
   const { preference: themePref, setPreference: setThemePref } = useThemePreference();
+  const [themePickerOpen, setThemePickerOpen] = useState(false);
 
   const currentCurrency = getCurrency(blob.currency);
 
@@ -282,9 +294,10 @@ export function SettingsScreen() {
                       <Text
                         allowFontScaling
                         maxFontSizeMultiplier={t.a11y.maxFontScale}
+                        numberOfLines={1}
                         style={[t.type.body, { color: t.color.text.primary }]}
                       >
-                        Unlock with Face ID / Touch ID
+                        Unlock with biometrics
                       </Text>
                     </View>
                     <Switch
@@ -306,9 +319,11 @@ export function SettingsScreen() {
         {/* ─── Appearance ───────────────────────────────────────────────── */}
         <SectionLabel>Appearance</SectionLabel>
         <Card>
-          <View style={{ paddingHorizontal: t.space[3], paddingVertical: t.space[3] }}>
-            <ThemeSegmented value={themePref} onChange={setThemePref} />
-          </View>
+          <Row
+            label="Theme"
+            value={THEME_LABELS[themePref]}
+            onPress={() => setThemePickerOpen(true)}
+          />
         </Card>
 
         {/* ─── Reset ────────────────────────────────────────────────────── */}
@@ -446,6 +461,72 @@ export function SettingsScreen() {
             </Button>
           </View>
         </View>
+      </BottomSheet>
+
+      {/* Theme picker */}
+      <BottomSheet
+        visible={themePickerOpen}
+        onDismiss={() => setThemePickerOpen(false)}
+      >
+        <Text
+          allowFontScaling
+          maxFontSizeMultiplier={t.a11y.maxFontScale}
+          accessibilityRole="header"
+          style={[t.type.title2, { color: t.color.text.primary, marginBottom: t.space[5] }]}
+        >
+          Theme
+        </Text>
+        {THEME_OPTIONS.map((opt, i) => {
+          const selected = themePref === opt.key;
+          return (
+            <Pressable
+              key={opt.key}
+              onPress={() => {
+                setThemePref(opt.key);
+                setThemePickerOpen(false);
+              }}
+              accessibilityRole="button"
+              accessibilityLabel={`${opt.label} theme`}
+              accessibilityState={{ selected }}
+              style={({ pressed }) => ({
+                flexDirection: 'row',
+                alignItems: 'center',
+                paddingVertical: t.space[3],
+                borderTopWidth: i === 0 ? 0 : StyleSheet.hairlineWidth,
+                borderTopColor: t.color.border.hairline,
+                opacity: pressed ? 0.6 : 1,
+              })}
+            >
+              <View style={{ flex: 1 }}>
+                <Text
+                  allowFontScaling
+                  maxFontSizeMultiplier={t.a11y.maxFontScale}
+                  style={[
+                    t.type.body,
+                    {
+                      color: t.color.text.primary,
+                      fontWeight: selected ? t.fontWeight.semibold : t.fontWeight.regular,
+                    },
+                  ]}
+                >
+                  {opt.label}
+                </Text>
+                <Text
+                  allowFontScaling
+                  maxFontSizeMultiplier={t.a11y.maxFontScale}
+                  style={[t.type.footnote, { color: t.color.text.secondary, marginTop: 2 }]}
+                >
+                  {opt.hint}
+                </Text>
+              </View>
+              {selected ? (
+                <Text style={[t.type.body, { color: t.color.brand.base, fontWeight: t.fontWeight.semibold }]}>
+                  ✓
+                </Text>
+              ) : null}
+            </Pressable>
+          );
+        })}
       </BottomSheet>
     </View>
   );
@@ -596,68 +677,3 @@ function Row({ label, sublabel, value, onPress, destructive }: RowProps) {
   );
 }
 
-// ─── Theme segmented ─────────────────────────────────────────────────────────
-// Three-segment picker: System · Light · Dark. Matches the pill treatment
-// used on the ₦/% toggle so the visual language stays consistent.
-
-function ThemeSegmented({
-  value,
-  onChange,
-}: {
-  value: ThemePreference;
-  onChange: (next: ThemePreference) => void;
-}) {
-  const t = useTokens();
-  const options: Array<{ key: ThemePreference; label: string }> = [
-    { key: 'system', label: 'System' },
-    { key: 'light', label: 'Light' },
-    { key: 'dark', label: 'Dark' },
-  ];
-  return (
-    <View
-      style={{
-        flexDirection: 'row',
-        alignItems: 'stretch',
-        height: 44,
-        backgroundColor: t.color.bg.sunken,
-        borderRadius: t.radii.md,
-        padding: 2,
-      }}
-    >
-      {options.map((opt) => {
-        const selected = value === opt.key;
-        return (
-          <Pressable
-            key={opt.key}
-            onPress={() => onChange(opt.key)}
-            accessibilityRole="button"
-            accessibilityLabel={`${opt.label} theme`}
-            accessibilityState={{ selected }}
-            style={{
-              flex: 1,
-              alignItems: 'center',
-              justifyContent: 'center',
-              borderRadius: t.radii.md - 2,
-              backgroundColor: selected ? t.color.bg.elevated : 'transparent',
-              ...(selected ? t.shadow.xs : {}),
-            }}
-          >
-            <Text
-              allowFontScaling
-              maxFontSizeMultiplier={t.a11y.maxFontScale}
-              style={[
-                t.type.subhead,
-                {
-                  color: selected ? t.color.text.primary : t.color.text.secondary,
-                  fontWeight: selected ? t.fontWeight.semibold : t.fontWeight.regular,
-                },
-              ]}
-            >
-              {opt.label}
-            </Text>
-          </Pressable>
-        );
-      })}
-    </View>
-  );
-}
