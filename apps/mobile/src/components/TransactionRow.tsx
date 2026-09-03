@@ -1,7 +1,8 @@
 import React from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import type { Transaction } from '@budgetplanner/core';
-import { useTokens } from '../theme/ThemeProvider';
+import { useIsDark, useTokens } from '../theme/ThemeProvider';
+import { categoryTint } from '../theme/categoryColor';
 import { AmountDisplay } from './AmountDisplay';
 import { CategoryDot } from './CategoryDot';
 
@@ -21,6 +22,13 @@ interface TransactionRowProps {
    * there's no grouping, so the date qualifier is what makes the list scannable.
    */
   hideDate?: boolean;
+  /**
+   * "dot" (default) — small 8pt category dot next to the text. Used by the
+   * Activity tab and other list surfaces where compactness matters.
+   * "avatar" — 40pt tinted circle with the category's initial in the accent
+   * colour. Used on Home to give the recent-activity strip more visual weight.
+   */
+  badgeStyle?: 'dot' | 'avatar';
 }
 
 /**
@@ -40,8 +48,10 @@ export function TransactionRow({
   onPress,
   hideCategory = false,
   hideDate = false,
+  badgeStyle = 'dot',
 }: TransactionRowProps) {
   const t = useTokens();
+  const isDark = useIsDark();
   const logged = new Date(transaction.loggedAt);
   const time = logged.toLocaleTimeString(undefined, {
     hour: 'numeric',
@@ -78,10 +88,36 @@ export function TransactionRow({
       ]}
     >
       {!hideCategory ? (
-        <CategoryDot
-          color={categoryColor}
-          style={{ marginRight: t.space[3] }}
-        />
+        badgeStyle === 'avatar' ? (
+          <View
+            style={{
+              width: 40,
+              height: 40,
+              borderRadius: 20,
+              backgroundColor: categoryTint(categoryColor, isDark),
+              alignItems: 'center',
+              justifyContent: 'center',
+              marginRight: t.space[3],
+            }}
+          >
+            <Text
+              allowFontScaling={false}
+              style={{
+                fontFamily: t.fontFamily.semibold,
+                fontSize: 16,
+                lineHeight: 20,
+                color: categoryColor,
+              }}
+            >
+              {(categoryLabel.trim()[0] ?? '?').toUpperCase()}
+            </Text>
+          </View>
+        ) : (
+          <CategoryDot
+            color={categoryColor}
+            style={{ marginRight: t.space[3] }}
+          />
+        )
       ) : null}
 
       <View style={{ flex: 1, minWidth: 0 }}>
