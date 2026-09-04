@@ -152,3 +152,46 @@ function isoDateKey(d: Date): string {
   const day = String(d.getUTCDate()).padStart(2, '0');
   return `${y}-${m}-${day}`;
 }
+
+// ─── Pace ──────────────────────────────────────────────────────────────────
+// Comparing "spent so far" to "even-burn suggested spend so far" gives us the
+// pace read-out on Home. The user isn't watching a spreadsheet — they want to
+// know at a glance whether they're on track. One chip, one word.
+
+export type Pace = 'ahead' | 'onPace' | 'behind' | 'atLimit';
+
+/** Days completed in `monthKey` up to and including `now`. At least 0. */
+function daysElapsedIn(monthKey: string, now: Date = new Date()): number {
+  const [y, m] = monthKey.split('-').map(Number);
+  if (!y || !m) return 0;
+  const inThisMonth = now.getUTCFullYear() === y && now.getUTCMonth() + 1 === m;
+  return inThisMonth ? Math.max(0, now.getUTCDate() - 1) : 0;
+}
+
+/**
+ * How you're doing vs. an even burn rate.
+ *
+ *   suggestedSpentSoFar = flexibleBudget × (daysElapsed / daysInMonth)
+ *
+ * ahead  = spent is ≥5% under suggestion
+ * onPace = spent is within ±5% of suggestion
+ * behind = spent is ≥5% over suggestion (but budget still positive)
+ * atLimit = nothing left to spend today
+ *
+ * The 5% dead-zone stops the chip flip-flopping day-to-day; it's a mood
+ * indicator, not an accountant.
+ */
+export function paceStatus(month: MonthState, now: Date = new Date()): Pace {
+  if (todaysSafeToSpend(month, now) <= 0) return 'atLimit';
+  const budget = monthSafeToSpend(month.plan);
+  if (budget <= 0) return 'onPace';
+  const elapsed = daysElapsedIn(month.monthKey, now);
+  const total = elapsed + daysRemainingIn(month.monthKey, now);
+  if (elapsed <= 0) return 'onPace'; // day 1 — nothing to judge against
+  const suggested = budget * (elapsed / total);
+  const spent = totalSpent(month);
+  const delta = (spent - suggested) / Math.max(1, suggested);
+  if (delta <= -0.05) return 'ahead';
+  if (delta >= 0.05) return 'behind';
+  return 'onPace';
+}

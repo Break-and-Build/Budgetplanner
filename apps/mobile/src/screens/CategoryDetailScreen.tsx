@@ -233,6 +233,7 @@ export function CategoryDetailScreen() {
                 categoryColor={cat.color}
                 onPress={() => nav.navigate('TransactionDetail', { id: item.id })}
                 hideCategory
+                hideDate  // DayHeader owns the grouping here
               />
               {index < section.data.length - 1 ? (
                 <View

@@ -187,6 +187,7 @@ export function ActivityScreen() {
               categoryLabel={resolveCategory(categories, item.categoryId).name}
               categoryColor={resolveCategory(categories, item.categoryId).color}
               onPress={() => nav.navigate('TransactionDetail', { id: item.id })}
+              hideDate  // DayHeader groups these — date qualifier would echo it
             />
             {index < section.data.length - 1 ? (
               <View

@@ -3,13 +3,14 @@
  *
  * Anchored on the question "Can I spend right now?" Hierarchy from top:
  *
- *   1. Today's safe-to-spend  (hero numeric, big)
- *   2. Four category bars     (plan-vs-actual, stacked)
- *   3. Recent activity        (last 3 transactions + "See all")
- *   4. Adjust plan            (low-emphasis link)
+ *   1. Top row: date + circular icon buttons (eye, gear)
+ *   2. Dark hero card: pace chip + big safe-to-spend + context line
+ *   3. Four category rows: numbers-first scan
+ *   4. Compressed plan row (single line, tap to adjust)
+ *   5. Recent activity — avatar-badged rows
  *
- * The month-close banner is built in task S3 — it will appear above (2) when
- * triggered. The "+" FAB belongs to the TabShell, not this screen.
+ * Month-close banner still appears above (3) when triggered. The "+" FAB
+ * belongs to the TabShell, not this screen.
  */
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
@@ -26,24 +27,22 @@ import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import {
+  Calendar as CalendarIcon,
   ChevronRight,
+  ChevronUp,
   Eye,
   EyeOff,
+  Minus,
   Plus,
   Settings as SettingsIcon,
   X as XIcon,
 } from 'lucide-react-native';
-import {
-  calcSavingsTotal,
-  calcTotalIncome,
-  calcTotalPriorities,
-  shouldShowMonthCloseBanner,
-} from '@budgetplanner/core';
+import { shouldShowMonthCloseBanner } from '@budgetplanner/core';
 
-import { useTokens } from '../theme/ThemeProvider';
+import { useIsDark, useTokens } from '../theme/ThemeProvider';
 import { TabShell } from '../components/TabShell';
 import { AmountDisplay } from '../components/AmountDisplay';
-import { CategoryBar } from '../components/CategoryBar';
+import { HomeCategoryRow } from '../components/HomeCategoryRow';
 import { SpotlightTour, type SpotlightStep } from '../components/SpotlightTour';
 import { TransactionRow } from '../components/TransactionRow';
 import { Button } from '../components/ui/Button';
@@ -52,7 +51,9 @@ import { resolveCategory } from '../state/categories';
 import {
   allocatedByCategory,
   daysRemainingIn,
+  monthRemaining,
   monthSafeToSpend,
+  paceStatus,
   recentTransactions,
   spentByCategory,
   todaysSafeToSpend,
@@ -62,8 +63,29 @@ import type { RootStackParamList, MainTabsParamList } from '../types/navigation'
 type Nav = NativeStackNavigationProp<RootStackParamList> &
   BottomTabNavigationProp<MainTabsParamList>;
 
+// Hero-card ground. Kept out of tokens because it's a one-off premium surface
+// with mode-specific colour needs: charcoal-on-cream in light, brand-tinted
+// dark on near-black in dark. Text is cream in both.
+const HERO_BG_LIGHT = '#15151A';
+const HERO_BG_DARK = '#26224A';
+const HERO_TEXT = '#FAFAF7';
+const HERO_TEXT_MUTED = 'rgba(250, 250, 247, 0.72)';
+const HERO_TEXT_DIM = 'rgba(250, 250, 247, 0.55)';
+
+// Pace-chip colours — sit on the dark hero bg, need enough saturation to read.
+const PACE_STYLES: Record<
+  'ahead' | 'onPace' | 'behind' | 'atLimit',
+  { bg: string; fg: string; label: string; iconDir: 'up' | 'flat' | 'down' | 'stop' }
+> = {
+  ahead: { bg: 'rgba(140, 205, 155, 0.22)', fg: '#B9E4C3', label: 'Ahead of pace', iconDir: 'up' },
+  onPace: { bg: 'rgba(250, 250, 247, 0.14)', fg: '#F2F2F4', label: 'On pace', iconDir: 'flat' },
+  behind: { bg: 'rgba(228, 178, 106, 0.20)', fg: '#E4B26A', label: 'Behind pace', iconDir: 'down' },
+  atLimit: { bg: 'rgba(224, 122, 122, 0.20)', fg: '#E07A7A', label: 'At today’s limit', iconDir: 'stop' },
+};
+
 export function HomeScreen() {
   const t = useTokens();
+  const isDark = useIsDark();
   const nav = useNavigation<Nav>();
   const {
     currentMonth,
@@ -83,8 +105,6 @@ export function HomeScreen() {
   const { width: screenW, height: screenH } = useWindowDimensions();
 
   // ─── Month-close banner ────────────────────────────────────────────────────
-  // Appears from the 28th onward, or whenever the system clock has moved past
-  // the current monthKey (overdue close). Overdue close is undismissable.
   const showBanner = shouldShowMonthCloseBanner(now, currentMonth);
   const overdue = nowMonthKey(now) > currentMonth.monthKey;
   const bannerVisible = showBanner && (overdue || !monthCloseBannerDismissed);
@@ -96,33 +116,28 @@ export function HomeScreen() {
   // ─── Selectors ─────────────────────────────────────────────────────────────
   const today = todaysSafeToSpend(currentMonth, now);
   const daysLeft = daysRemainingIn(currentMonth.monthKey, now);
+  const remainingThisMonth = Math.max(0, monthRemaining(currentMonth));
+  const pace = paceStatus(currentMonth, now);
   const allocated = useMemo(() => allocatedByCategory(currentMonth.plan), [currentMonth.plan]);
   const spent = useMemo(() => spentByCategory(currentMonth), [currentMonth]);
   const recent = useMemo(() => recentTransactions(currentMonth, 3), [currentMonth]);
   const categories = currentMonth.plan.categories;
+  const monthBudget = useMemo(() => monthSafeToSpend(currentMonth.plan), [currentMonth.plan]);
+  const hasIncome = monthBudget > 0 || currentMonth.plan.income.length > 0;
+  const fullyAllocated = currentMonth.plan.income.length > 0 && monthBudget === 0;
 
-  // ─── Plan summary (income / priorities / savings → monthly budget) ─────────
-  // Surfaced on Home so users can see the numbers they entered during setup —
-  // and understand where "safe to spend" comes from (tester feedback).
-  const plan = currentMonth.plan;
-  const totalIncome = useMemo(() => calcTotalIncome(plan.income), [plan.income]);
-  const totalPriorities = useMemo(() => calcTotalPriorities(plan.priorities), [plan.priorities]);
-  const totalSavings = useMemo(
-    () => calcSavingsTotal(plan.savings, totalIncome - totalPriorities),
-    [plan.savings, totalIncome, totalPriorities],
+  // Human-readable date for the top row.
+  const dateLine = useMemo(
+    () => ({
+      weekday: now.toLocaleDateString(undefined, { weekday: 'long' }).toUpperCase(),
+      day: now.toLocaleDateString(undefined, { day: 'numeric', month: 'long' }),
+    }),
+    // now is recreated each render; date parts only change at midnight.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [currentMonth.monthKey, new Date().getDate()],
   );
-  const monthBudget = useMemo(() => monthSafeToSpend(plan), [plan]);
-
-  // Two "empty" states that otherwise render as a confusing wall of ₦0 bars:
-  //   • No income entered yet → prompt to add it
-  //   • Income entered but fully used by priorities + savings → explain why
-  const hasIncome = totalIncome > 0;
-  const fullyAllocated = hasIncome && monthBudget === 0;
 
   // ─── First-run spotlight tour ──────────────────────────────────────────────
-  // Fires once, after the user has a budget (so the hero + bars have real
-  // numbers to point at). Measures the two on-screen anchors; the log button
-  // is a fixed bottom-centre rect since it lives in the tab shell.
   const heroRef = useRef<View>(null);
   const categoryCardRef = useRef<View>(null);
   const fabRef = useRef<View>(null);
@@ -146,7 +161,7 @@ export function HomeScreen() {
               {
                 rect: { x: cx, y: cy, width: cw, height: ch },
                 title: 'Your categories',
-                body: 'Each bar shows what’s left in a category this month. Tap one for detail.',
+                body: 'Each row shows what’s left in a category this month. Tap one for detail.',
               },
               {
                 rect: { x: fx, y: fy, width: fw, height: fh },
@@ -154,8 +169,6 @@ export function HomeScreen() {
                 body: 'Tap + to log a purchase in seconds — amount, category, done.',
               },
             ]);
-          // Measure the real FAB so the highlight lands on it exactly; fall back
-          // to a bottom-right estimate if the ref isn't ready.
           if (fabRef.current) {
             fabRef.current.measureInWindow(build);
           } else {
@@ -165,7 +178,6 @@ export function HomeScreen() {
       });
     }, 400);
     return () => clearTimeout(timer);
-    // Only re-evaluate when the gating inputs change.
   }, [walkthroughSeen, hasIncome, categories.length, splashHidden, screenW, screenH, insets.bottom]);
 
   const finishTour = () => {
@@ -174,14 +186,10 @@ export function HomeScreen() {
   };
 
   // ─── FAB ───────────────────────────────────────────────────────────────────
-  // Opens the FastLogSheet via context. The sheet itself is rendered once at
-  // the App root so the same instance shows on Home and Activity.
-  const onFabPress = openFastLog;
-
   const fab = (
     <Pressable
       ref={fabRef}
-      onPress={onFabPress}
+      onPress={openFastLog}
       accessibilityRole="button"
       accessibilityLabel="Log a transaction"
       style={({ pressed }) => ({
@@ -198,114 +206,179 @@ export function HomeScreen() {
     </Pressable>
   );
 
+  const paceStyle = PACE_STYLES[pace];
+
   return (
     <TabShell fab={fab}>
       <ScrollView
         contentContainerStyle={{ paddingBottom: t.space[11] }}
         showsVerticalScrollIndicator={false}
       >
-        {/* ─── Hero: today's safe-to-spend (gear inline with eyebrow) ───── */}
+        {/* ─── Top row: date + circular icon buttons ────────────────────── */}
+        <View
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            paddingHorizontal: t.space[4],
+            paddingTop: t.space[3],
+            paddingBottom: t.space[2],
+          }}
+        >
+          <View>
+            <Text
+              allowFontScaling
+              maxFontSizeMultiplier={t.a11y.maxFontScale}
+              style={[t.type.caption2, { color: t.color.text.tertiary }]}
+            >
+              {dateLine.weekday}
+            </Text>
+            <Text
+              allowFontScaling
+              maxFontSizeMultiplier={t.a11y.maxFontScale}
+              style={{
+                fontFamily: t.fontFamily.semibold,
+                fontSize: 15,
+                lineHeight: 20,
+                color: t.color.text.primary,
+                marginTop: 1,
+              }}
+            >
+              {dateLine.day}
+            </Text>
+          </View>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.space[2] }}>
+            <CircleIconButton
+              accessibilityLabel={privacyMode ? 'Show amounts' : 'Hide amounts'}
+              onPress={togglePrivacyMode}
+            >
+              {privacyMode ? (
+                <EyeOff size={18} color={t.color.text.secondary} strokeWidth={1.75} />
+              ) : (
+                <Eye size={18} color={t.color.text.secondary} strokeWidth={1.75} />
+              )}
+            </CircleIconButton>
+            <CircleIconButton
+              accessibilityLabel="Open settings"
+              onPress={() => nav.navigate('Settings')}
+            >
+              <SettingsIcon size={18} color={t.color.text.secondary} strokeWidth={1.75} />
+            </CircleIconButton>
+          </View>
+        </View>
+
+        {/* ─── Dark hero card ───────────────────────────────────────────── */}
         <View
           ref={heroRef}
           accessible
           accessibilityLabel={
             today > 0
-              ? `${symbol}${today.toLocaleString('en-US')} left to spend today, ${daysLeft} ${daysLeft === 1 ? 'day' : 'days'} to go.`
+              ? `${symbol}${today.toLocaleString('en-US')} left to spend today, ${daysLeft} ${daysLeft === 1 ? 'day' : 'days'} to go. ${paceStyle.label}.`
               : `Nothing left to spend today, ${daysLeft} ${daysLeft === 1 ? 'day' : 'days'} to go.`
           }
           style={{
-            paddingHorizontal: t.space[4],
-            // Breathing room between status bar (safe-area top) and the eyebrow.
-            paddingTop: t.space[5],
-            paddingBottom: t.space[7],
-            alignItems: 'flex-start',
+            marginHorizontal: t.space[4],
+            marginTop: t.space[3],
+            marginBottom: t.space[4],
+            paddingHorizontal: t.space[5],
+            paddingTop: t.space[5] + 2,
+            paddingBottom: t.space[5],
+            backgroundColor: isDark ? HERO_BG_DARK : HERO_BG_LIGHT,
+            borderRadius: 22,
+            overflow: 'hidden',
           }}
         >
-          {/* Eyebrow row: caption text on the left, gear icon on the right.
-              The gear uses hitSlop (not a fixed 44pt box) so the row tracks
-              the caption's natural height — no dead space below it. */}
           <View
             style={{
               flexDirection: 'row',
               alignItems: 'center',
               justifyContent: 'space-between',
-              alignSelf: 'stretch',
               marginBottom: t.space[1],
             }}
           >
             <Text
               allowFontScaling
               maxFontSizeMultiplier={t.a11y.maxFontScale}
-              style={[
-                t.type.caption2,
-                {
-                  color: t.color.text.secondary,
-                  textTransform: 'uppercase',
-                },
-              ]}
+              style={{
+                fontFamily: t.fontFamily.medium,
+                fontSize: 11,
+                lineHeight: 16,
+                letterSpacing: 0.6,
+                textTransform: 'uppercase',
+                color: HERO_TEXT_DIM,
+              }}
             >
               Safe to spend today
             </Text>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.space[3] }}>
-              <Pressable
-                onPress={togglePrivacyMode}
-                accessibilityRole="button"
-                accessibilityLabel={privacyMode ? 'Show amounts' : 'Hide amounts'}
-                hitSlop={14}
-                style={({ pressed }) => ({ opacity: pressed ? 0.5 : 1, padding: t.space[1] })}
-              >
-                {privacyMode ? (
-                  <EyeOff size={20} color={t.color.text.secondary} strokeWidth={1.75} />
-                ) : (
-                  <Eye size={20} color={t.color.text.secondary} strokeWidth={1.75} />
-                )}
-              </Pressable>
-              <Pressable
-                onPress={() => nav.navigate('Settings')}
-                accessibilityRole="button"
-                accessibilityLabel="Open settings"
-                // 14pt hitSlop on every side → tap target is (22 + 28) = 50pt,
-                // comfortably above the 44pt minimum, while the visible icon
-                // stays small enough not to dominate the caption row.
-                hitSlop={14}
-                style={({ pressed }) => ({
-                  opacity: pressed ? 0.5 : 1,
-                  padding: t.space[1],
-                })}
-              >
-                <SettingsIcon size={20} color={t.color.text.primary} strokeWidth={1.75} />
-              </Pressable>
-            </View>
+            {hasIncome ? <PaceChip pace={pace} tokens={t} /> : null}
           </View>
           <AmountDisplay
             value={today}
             symbol={symbol}
             size="hero"
+            color={HERO_TEXT}
             align="left"
             accessibilityLabel=""
           />
-          <Text
-            allowFontScaling
-            maxFontSizeMultiplier={t.a11y.maxFontScale}
-            style={[
-              t.type.callout,
-              { color: t.color.text.secondary, marginTop: t.space[2] },
-            ]}
+          <View
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: t.space[3] + 2,
+              marginTop: t.space[1] + 2,
+            }}
           >
-            {!hasIncome
-              ? 'Set up your budget to get started'
-              : today > 0
-                ? `${daysLeft} ${daysLeft === 1 ? 'day' : 'days'} to go this month`
-                : `You're at today's limit · ${daysLeft} ${daysLeft === 1 ? 'day' : 'days'} to go`}
-          </Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              <CalendarIcon size={14} color={HERO_TEXT_MUTED} strokeWidth={1.75} />
+              <Text
+                allowFontScaling
+                maxFontSizeMultiplier={t.a11y.maxFontScale}
+                style={{
+                  fontFamily: t.fontFamily.regular,
+                  fontSize: 13,
+                  lineHeight: 20,
+                  color: HERO_TEXT_MUTED,
+                }}
+              >
+                {!hasIncome
+                  ? 'Set up your budget'
+                  : `${daysLeft} ${daysLeft === 1 ? 'day' : 'days'} left`}
+              </Text>
+            </View>
+            {hasIncome ? (
+              <>
+                <View
+                  style={{
+                    width: 3,
+                    height: 3,
+                    borderRadius: 2,
+                    backgroundColor: 'rgba(250, 250, 247, 0.3)',
+                  }}
+                />
+                <Text
+                  allowFontScaling
+                  maxFontSizeMultiplier={t.a11y.maxFontScale}
+                  style={{
+                    fontFamily: t.fontFamily.regular,
+                    fontSize: 13,
+                    lineHeight: 20,
+                    color: HERO_TEXT_MUTED,
+                    fontVariant: ['tabular-nums'],
+                  }}
+                >
+                  {symbol}{remainingThisMonth.toLocaleString('en-US')} remaining
+                </Text>
+              </>
+            ) : null}
+          </View>
         </View>
 
-        {/* ─── Month-close banner (28th onward, or overdue close) ───────── */}
+        {/* ─── Month-close banner (unchanged) ───────────────────────────── */}
         {bannerVisible ? (
           <View
             style={{
               marginHorizontal: t.space[4],
-              marginBottom: t.space[5],
+              marginBottom: t.space[4],
               padding: t.space[4],
               backgroundColor: t.color.bg.elevated,
               borderRadius: t.radii.lg,
@@ -326,10 +399,7 @@ export function HomeScreen() {
                 <Text
                   allowFontScaling
                   maxFontSizeMultiplier={t.a11y.maxFontScale}
-                  style={[
-                    t.type.headline,
-                    { color: t.color.text.primary },
-                  ]}
+                  style={[t.type.headline, { color: t.color.text.primary }]}
                 >
                   {overdue
                     ? `${bannerMonthLabel} wasn't closed`
@@ -340,10 +410,7 @@ export function HomeScreen() {
                   maxFontSizeMultiplier={t.a11y.maxFontScale}
                   style={[
                     t.type.footnote,
-                    {
-                      color: t.color.text.secondary,
-                      marginTop: t.space[1],
-                    },
+                    { color: t.color.text.secondary, marginTop: t.space[1] },
                   ]}
                 >
                   {overdue
@@ -362,22 +429,14 @@ export function HomeScreen() {
                     opacity: pressed ? 0.5 : 1,
                   })}
                 >
-                  <XIcon
-                    size={18}
-                    color={t.color.text.tertiary}
-                    strokeWidth={1.75}
-                  />
+                  <XIcon size={18} color={t.color.text.tertiary} strokeWidth={1.75} />
                 </Pressable>
               ) : null}
             </View>
             <View style={{ flexDirection: 'row', gap: t.space[3], marginTop: t.space[4] }}>
               {!overdue ? (
                 <View style={{ flex: 1 }}>
-                  <Button
-                    variant="secondary"
-                    onPress={dismissMonthCloseBanner}
-                    fullWidth
-                  >
+                  <Button variant="secondary" onPress={dismissMonthCloseBanner} fullWidth>
                     Not yet
                   </Button>
                 </View>
@@ -397,7 +456,7 @@ export function HomeScreen() {
         ) : null}
 
         {!hasIncome ? (
-          /* ─── No-income prompt (replaces the wall of ₦0 bars) ────────── */
+          /* ─── No-income prompt ─────────────────────────────────────────── */
           <View
             style={{
               marginHorizontal: t.space[4],
@@ -424,7 +483,7 @@ export function HomeScreen() {
               ]}
             >
               Add your income, priorities and savings, and we'll show what's safe
-              to spend across your four categories.
+              to spend across your categories.
             </Text>
             <Button
               variant="primary"
@@ -435,13 +494,13 @@ export function HomeScreen() {
             </Button>
           </View>
         ) : (
-          /* ─── Category bars ─────────────────────────────────────────── */
+          /* ─── Scan-first category card ─────────────────────────────────── */
           <View
             ref={categoryCardRef}
             style={{
               marginHorizontal: t.space[4],
               backgroundColor: t.color.bg.elevated,
-              borderRadius: t.radii.lg,
+              borderRadius: 20,
               borderWidth: StyleSheet.hairlineWidth,
               borderColor: t.color.border.card,
               overflow: 'hidden',
@@ -449,13 +508,12 @@ export function HomeScreen() {
           >
             {categories.map((c, idx) => (
               <View key={c.id}>
-                <CategoryBar
+                <HomeCategoryRow
                   color={c.color}
                   label={c.name}
                   allocated={allocated[c.id] ?? 0}
                   spent={spent[c.id] ?? 0}
                   symbol={symbol}
-                  size="compact"
                   onPress={() => nav.navigate('CategoryDetail', { category: c.id })}
                 />
                 {idx < categories.length - 1 ? (
@@ -463,7 +521,7 @@ export function HomeScreen() {
                     style={{
                       height: StyleSheet.hairlineWidth,
                       backgroundColor: t.color.border.hairline,
-                      marginLeft: t.space[4],
+                      marginLeft: t.space[4] + 2,
                     }}
                   />
                 ) : null}
@@ -472,8 +530,6 @@ export function HomeScreen() {
           </View>
         )}
 
-        {/* When income is fully committed to priorities + savings, the bars
-            are all ₦0 — say so plainly rather than leaving it a mystery. */}
         {fullyAllocated ? (
           <Text
             allowFontScaling
@@ -492,78 +548,77 @@ export function HomeScreen() {
           </Text>
         ) : null}
 
-        {/* ─── Your plan summary (income → priorities → savings → budget) ── */}
+        {/* ─── Compressed plan row ─────────────────────────────────────── */}
         {hasIncome ? (
           <Pressable
             onPress={() => nav.navigate('AdjustPlan')}
             accessibilityRole="button"
-            accessibilityLabel="View and adjust this month's plan"
+            accessibilityLabel={`Adjust plan. This month, ${symbol}${monthBudget.toLocaleString('en-US')} to spend.`}
             style={({ pressed }) => ({
               marginHorizontal: t.space[4],
-              marginTop: t.space[4],
-              padding: t.space[4],
+              marginTop: t.space[3],
+              paddingHorizontal: t.space[4] + 2,
+              paddingVertical: t.space[3],
               backgroundColor: pressed ? t.color.bg.sunken : t.color.bg.elevated,
-              borderRadius: t.radii.lg,
+              borderRadius: 16,
               borderWidth: StyleSheet.hairlineWidth,
               borderColor: t.color.border.card,
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'space-between',
             })}
           >
-            <View
-              style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                marginBottom: t.space[3],
-              }}
-            >
+            <View style={{ flex: 1, minWidth: 0 }}>
               <Text
                 allowFontScaling
                 maxFontSizeMultiplier={t.a11y.maxFontScale}
                 style={[
                   t.type.caption2,
-                  { color: t.color.text.secondary, textTransform: 'uppercase' },
+                  { color: t.color.text.tertiary, textTransform: 'uppercase' },
                 ]}
               >
-                Your plan
+                This month
               </Text>
-              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                <Text
-                  allowFontScaling
-                  maxFontSizeMultiplier={t.a11y.maxFontScale}
-                  style={[
-                    t.type.footnote,
-                    { color: t.color.brand.base, fontWeight: t.fontWeight.semibold },
-                  ]}
-                >
-                  Adjust
-                </Text>
-                <ChevronRight size={16} color={t.color.brand.base} strokeWidth={2} />
-              </View>
+              <Text
+                allowFontScaling
+                maxFontSizeMultiplier={t.a11y.maxFontScale}
+                style={{
+                  fontFamily: t.fontFamily.semibold,
+                  fontSize: 15,
+                  lineHeight: 20,
+                  color: t.color.text.primary,
+                  marginTop: 1,
+                  fontVariant: ['tabular-nums'],
+                }}
+              >
+                {symbol}{monthBudget.toLocaleString('en-US')} to spend
+              </Text>
             </View>
-
-            <PlanRow label="Income" value={totalIncome} symbol={symbol} sign="" t={t} />
-            <PlanRow label="Priorities" value={totalPriorities} symbol={symbol} sign="−" t={t} />
-            <PlanRow label="Savings" value={totalSavings} symbol={symbol} sign="−" t={t} />
-            <View
-              style={{
-                height: StyleSheet.hairlineWidth,
-                backgroundColor: t.color.border.divider,
-                marginVertical: t.space[2],
-              }}
-            />
-            <PlanRow label="To spend this month" value={monthBudget} symbol={symbol} sign="" emphasis t={t} />
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2 }}>
+              <Text
+                allowFontScaling
+                maxFontSizeMultiplier={t.a11y.maxFontScale}
+                style={[
+                  t.type.footnote,
+                  { color: t.color.brand.base, fontWeight: t.fontWeight.semibold },
+                ]}
+              >
+                Adjust plan
+              </Text>
+              <ChevronRight size={15} color={t.color.brand.base} strokeWidth={2.25} />
+            </View>
           </Pressable>
         ) : null}
 
-        {/* ─── Section: Recent activity ─────────────────────────────────── */}
-        <View style={{ marginTop: t.space[7] }}>
+        {/* ─── Recent activity: avatar-badged rows ───────────────────────── */}
+        <View style={{ marginTop: t.space[6] }}>
           <View
             style={{
               flexDirection: 'row',
               alignItems: 'baseline',
               justifyContent: 'space-between',
-              paddingHorizontal: t.space[4],
-              marginBottom: t.space[2],
+              paddingHorizontal: t.space[4] + 4,
+              marginBottom: t.space[2] + 2,
             }}
           >
             <Text
@@ -571,10 +626,7 @@ export function HomeScreen() {
               maxFontSizeMultiplier={t.a11y.maxFontScale}
               style={[
                 t.type.caption2,
-                {
-                  color: t.color.text.secondary,
-                  textTransform: 'uppercase',
-                },
+                { color: t.color.text.tertiary, textTransform: 'uppercase' },
               ]}
               accessibilityRole="header"
             >
@@ -593,10 +645,7 @@ export function HomeScreen() {
                   maxFontSizeMultiplier={t.a11y.maxFontScale}
                   style={[
                     t.type.footnote,
-                    {
-                      color: t.color.brand.base,
-                      fontWeight: t.fontWeight.semibold,
-                    },
+                    { color: t.color.brand.base, fontWeight: t.fontWeight.semibold },
                   ]}
                 >
                   See all
@@ -626,7 +675,7 @@ export function HomeScreen() {
               style={{
                 marginHorizontal: t.space[4],
                 backgroundColor: t.color.bg.elevated,
-                borderRadius: t.radii.lg,
+                borderRadius: 20,
                 borderWidth: StyleSheet.hairlineWidth,
                 borderColor: t.color.border.card,
                 overflow: 'hidden',
@@ -640,14 +689,15 @@ export function HomeScreen() {
                     categoryLabel={resolveCategory(categories, tx.categoryId).name}
                     categoryColor={resolveCategory(categories, tx.categoryId).color}
                     onPress={() => nav.navigate('TransactionDetail', { id: tx.id })}
+                    badgeStyle="avatar"
                   />
                   {idx < recent.length - 1 ? (
                     <View
                       style={{
                         height: StyleSheet.hairlineWidth,
                         backgroundColor: t.color.border.hairline,
-                        // Indent past row padding (16) + dot (8) + gap (12) = 36
-                        marginLeft: t.space[4] + 8 + t.space[3],
+                        // Indent past row padding (16) + avatar (40) + gap (12) = 68
+                        marginLeft: t.space[4] + 40 + t.space[3],
                       }}
                     />
                   ) : null}
@@ -663,61 +713,87 @@ export function HomeScreen() {
   );
 }
 
-// ─── Plan summary row ────────────────────────────────────────────────────────
-// One line of the "Your plan" card: sign + label on the left, amount right.
+// ─── Small building blocks ───────────────────────────────────────────────────
 
-function PlanRow({
-  label,
-  value,
-  symbol,
-  sign,
-  emphasis = false,
-  t,
+function CircleIconButton({
+  onPress,
+  accessibilityLabel,
+  children,
 }: {
-  label: string;
-  value: number;
-  symbol: string;
-  sign: '' | '−';
-  emphasis?: boolean;
-  t: ReturnType<typeof useTokens>;
+  onPress: () => void;
+  accessibilityLabel: string;
+  children: React.ReactNode;
 }) {
+  const t = useTokens();
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel}
+      hitSlop={6}
+      style={({ pressed }) => ({
+        width: 36,
+        height: 36,
+        borderRadius: 18,
+        backgroundColor: t.color.bg.elevated,
+        borderWidth: StyleSheet.hairlineWidth,
+        borderColor: t.color.border.card,
+        alignItems: 'center',
+        justifyContent: 'center',
+        opacity: pressed ? 0.55 : 1,
+      })}
+    >
+      {children}
+    </Pressable>
+  );
+}
+
+function PaceChip({
+  pace,
+  tokens,
+}: {
+  pace: 'ahead' | 'onPace' | 'behind' | 'atLimit';
+  tokens: ReturnType<typeof useTokens>;
+}) {
+  const s = PACE_STYLES[pace];
+  const Icon =
+    s.iconDir === 'up' ? ChevronUp :
+    s.iconDir === 'down' ? ChevronRight : // rotated below
+    s.iconDir === 'flat' ? Minus :
+    XIcon;
   return (
     <View
       style={{
         flexDirection: 'row',
         alignItems: 'center',
-        justifyContent: 'space-between',
-        paddingVertical: t.space[1],
+        gap: 5,
+        paddingLeft: 8,
+        paddingRight: 10,
+        paddingVertical: 4,
+        borderRadius: 999,
+        backgroundColor: s.bg,
       }}
     >
+      <Icon
+        size={12}
+        color={s.fg}
+        strokeWidth={2.5}
+        // The behind-pace arrow is a ChevronRight rotated 90° down.
+        style={s.iconDir === 'down' ? { transform: [{ rotate: '90deg' }] } : undefined}
+      />
       <Text
         allowFontScaling
-        maxFontSizeMultiplier={t.a11y.maxFontScale}
-        style={[
-          emphasis ? t.type.headline : t.type.subhead,
-          { color: emphasis ? t.color.text.primary : t.color.text.secondary },
-        ]}
+        maxFontSizeMultiplier={tokens.a11y.maxFontScale}
+        style={{
+          fontFamily: tokens.fontFamily.semibold,
+          fontSize: 11,
+          lineHeight: 14,
+          color: s.fg,
+          letterSpacing: 0.2,
+        }}
       >
-        {label}
+        {s.label}
       </Text>
-      <View style={{ flexDirection: 'row', alignItems: 'baseline' }}>
-        {sign ? (
-          <Text
-            allowFontScaling
-            maxFontSizeMultiplier={t.a11y.maxFontScale}
-            style={[t.type.subhead, { color: t.color.text.tertiary, marginRight: 2 }]}
-          >
-            {sign}
-          </Text>
-        ) : null}
-        <AmountDisplay
-          value={value}
-          symbol={symbol}
-          size={emphasis ? 'lg' : 'md'}
-          align="right"
-          accessibilityLabel=""
-        />
-      </View>
     </View>
   );
 }
@@ -738,4 +814,3 @@ function monthLabelFromKey(monthKey: string): string {
     year: sameYear ? undefined : 'numeric',
   });
 }
-
