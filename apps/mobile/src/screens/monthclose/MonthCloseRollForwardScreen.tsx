@@ -91,8 +91,8 @@ export function MonthCloseRollForwardScreen({
             { color: t.color.text.secondary, marginTop: t.space[1] },
           ]}
         >
-          Last month's priorities, savings and categories carry over. Confirm
-          they still match your plan, or exit to tweak via Adjust plan.
+          Last month's income, priorities, savings and categories carry over.
+          Confirm they still match your plan, or exit to tweak via Adjust plan.
         </Text>
       </View>
 
@@ -190,7 +190,7 @@ export function MonthCloseRollForwardScreen({
           },
         ]}
       >
-        Need to change something? Exit this screen and tap Adjust plan on Home,
+        Need to change something? Close this screen, open Adjust plan on Home,
         then come back to close out.
       </Text>
     </ModalStackShell>

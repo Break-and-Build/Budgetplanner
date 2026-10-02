@@ -107,9 +107,16 @@ export function HomeScreen() {
   const { width: screenW, height: screenH } = useWindowDimensions();
 
   // ─── Month-close banner ────────────────────────────────────────────────────
+  // Suppressed while the current month still needs its review — stacking the
+  // review-your-plan banner on top of the close-out banner leaves the user
+  // with two competing primary CTAs. Review is the prerequisite; close-out
+  // can wait a tap.
   const showBanner = shouldShowMonthCloseBanner(now, currentMonth);
   const overdue = nowMonthKey(now) > currentMonth.monthKey;
-  const bannerVisible = showBanner && (overdue || !monthCloseBannerDismissed);
+  const bannerVisible =
+    showBanner &&
+    !currentMonth.needsReview &&
+    (overdue || !monthCloseBannerDismissed);
   const bannerMonthLabel = useMemo(
     () => monthLabelFromKey(currentMonth.monthKey),
     [currentMonth.monthKey],
@@ -409,7 +416,7 @@ export function HomeScreen() {
             <View style={{ flexDirection: 'row', gap: t.space[3], marginTop: t.space[4] }}>
               <View style={{ flex: 1 }}>
                 <Button variant="secondary" onPress={confirmReview} fullWidth>
-                  Looks good
+                  Keep as-is
                 </Button>
               </View>
               <View style={{ flex: 2 }}>
