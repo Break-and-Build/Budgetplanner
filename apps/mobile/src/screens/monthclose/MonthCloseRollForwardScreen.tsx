@@ -1,13 +1,13 @@
 /**
- * MonthClose step 2 — Roll forward.
+ * MonthClose step 2 — Review and roll forward.
  *
- * Three read-only summary cards (Priorities · Savings · Buckets) showing
- * what carries to the next month. Final "Start [NextMonth]" button archives
- * the current month with reflection and rolls forward.
- *
- * v1 ships read-only cards — you can edit the plan after rolling forward
- * via AdjustPlan. The per-section inline edit-jump described in IA flow 5
- * is a v1.1 enhancement.
+ * The user confirms the plan that carries into the next month, section by
+ * section. Three cards (Priorities · Savings · Categories) show what will be
+ * carried. "Start [NextMonth]" is a confirmation: by tapping it the user is
+ * saying "this plan is still right for the coming month" — which is why
+ * `closeMonth` clears the needsReview flag that `rollForward` sets. A user
+ * who wants to edit before confirming leaves the ritual (any header dismiss
+ * works), edits via Home → Adjust plan, and re-opens the ritual.
  */
 
 import React from 'react';
@@ -50,7 +50,7 @@ export function MonthCloseRollForwardScreen({
     <ModalStackShell
       step={2}
       totalSteps={2}
-      primaryAction={{ label: `Start ${nextMonthLabel}`, onPress: onFinish }}
+      primaryAction={{ label: `Confirm & start ${nextMonthLabel}`, onPress: onFinish }}
       secondaryAction={{ label: 'Back', onPress: onBack }}
     >
       {/* Hero */}
@@ -73,7 +73,7 @@ export function MonthCloseRollForwardScreen({
             },
           ]}
         >
-          Carrying forward
+          Review your plan
         </Text>
         <Text
           allowFontScaling
@@ -81,7 +81,7 @@ export function MonthCloseRollForwardScreen({
           accessibilityRole="header"
           style={[t.type.title1, { color: t.color.text.primary }]}
         >
-          Start {nextMonthLabel}?
+          Still right for {nextMonthLabel}?
         </Text>
         <Text
           allowFontScaling
@@ -91,7 +91,8 @@ export function MonthCloseRollForwardScreen({
             { color: t.color.text.secondary, marginTop: t.space[1] },
           ]}
         >
-          Your plan carries over. Balances reset.
+          Last month's priorities, savings and categories carry over. Confirm
+          they still match your plan, or exit to tweak via Adjust plan.
         </Text>
       </View>
 
@@ -189,7 +190,8 @@ export function MonthCloseRollForwardScreen({
           },
         ]}
       >
-        You can edit the plan any time from Home → Adjust plan.
+        Need to change something? Exit this screen and tap Adjust plan on Home,
+        then come back to close out.
       </Text>
     </ModalStackShell>
   );

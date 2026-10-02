@@ -477,7 +477,17 @@ export function BudgetProvider({ children }: { children: React.ReactNode }) {
         ...prev,
         current: { ...prev.current, reflection },
       };
-      return rollForward(withReflection);
+      const rolled = rollForward(withReflection);
+      // The Month-Close ritual IS the plan review — the user has seen the
+      // carried plan on the roll-forward step and chose to start the new
+      // month. Clear the flag so Home doesn't surface the review banner
+      // on top of a plan they already confirmed through the ritual. Users
+      // who skip the ritual (first open on a new month without closing out)
+      // still get the banner because `rollForward` sets needsReview=true.
+      return {
+        ...rolled,
+        current: { ...rolled.current, needsReview: false },
+      };
     });
     // Reset session dismissal so the next month's banner can appear if needed.
     setBannerDismissed(false);
