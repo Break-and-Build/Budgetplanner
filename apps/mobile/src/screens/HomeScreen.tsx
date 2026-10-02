@@ -98,6 +98,7 @@ export function HomeScreen() {
     privacyMode,
     togglePrivacyMode,
     splashHidden,
+    recurring,
   } = useBudget();
 
   const now = new Date();
@@ -114,10 +115,10 @@ export function HomeScreen() {
   );
 
   // ─── Selectors ─────────────────────────────────────────────────────────────
-  const today = todaysSafeToSpend(currentMonth, now);
+  const today = todaysSafeToSpend(currentMonth, now, recurring);
   const daysLeft = daysRemainingIn(currentMonth.monthKey, now);
-  const remainingThisMonth = Math.max(0, monthRemaining(currentMonth));
-  const pace = paceStatus(currentMonth, now);
+  const remainingThisMonth = Math.max(0, monthRemaining(currentMonth, recurring));
+  const pace = paceStatus(currentMonth, now, recurring);
   const allocated = useMemo(() => allocatedByCategory(currentMonth.plan), [currentMonth.plan]);
   const spent = useMemo(() => spentByCategory(currentMonth), [currentMonth]);
   const recent = useMemo(() => recentTransactions(currentMonth, 3), [currentMonth]);

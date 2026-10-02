@@ -9,6 +9,7 @@ import type {
   BudgetPlan,
   CategoryId,
   MonthState,
+  RecurringTransaction,
   Transaction,
 } from '@budgetplanner/core';
 import {
@@ -82,11 +83,44 @@ export function remainingByCategory(month: MonthState): Record<CategoryId, numbe
 }
 
 /**
- * Total remaining across the month: flexible budget minus everything spent
- * (including spend under since-deleted categories, which has no allocation).
+ * Sum of active recurring rules that haven't fired yet this month.
+ *
+ * "Already fired" means `lastGeneratedMonth === currentMonthKey` — those are
+ * live transactions and already counted in `totalSpent`. Anything else is
+ * money the user has committed to spending but hasn't yet, and should be
+ * reserved from the "what's safe to spend" math so the hero number tells the
+ * honest truth throughout the month, not just after the rule's day arrives.
+ *
+ * Rules added mid-month after their `dayOfMonth` has passed won't fire until
+ * next month and are correctly excluded by that same check.
  */
-export function monthRemaining(month: MonthState): number {
-  return monthSafeToSpend(month.plan) - totalSpent(month);
+export function pendingRecurring(
+  recurring: RecurringTransaction[],
+  currentMonthKey: string,
+): number {
+  return recurring
+    .filter((r) => r.active && r.lastGeneratedMonth !== currentMonthKey)
+    .reduce((s, r) => s + r.amount, 0);
+}
+
+/**
+ * Total remaining across the month: flexible budget minus everything spent
+ * (including spend under since-deleted categories, which has no allocation),
+ * minus any recurring rules that still have to fire this month.
+ *
+ * Reserving pending recurring here is what keeps the hero figure honest
+ * throughout the month — the money the user has committed to internet, rent
+ * etc. is out of the pot from day 1, not from the day it posts.
+ */
+export function monthRemaining(
+  month: MonthState,
+  recurring: RecurringTransaction[] = [],
+): number {
+  return (
+    monthSafeToSpend(month.plan) -
+    totalSpent(month) -
+    pendingRecurring(recurring, month.monthKey)
+  );
 }
 
 /**
@@ -110,8 +144,12 @@ export function daysRemainingIn(monthKey: string, now: Date = new Date()): numbe
  * through today's allowance, the hero number says 0 — the bars and the
  * "over today" implication tell the user the rest.
  */
-export function todaysSafeToSpend(month: MonthState, now: Date = new Date()): number {
-  const remaining = monthRemaining(month);
+export function todaysSafeToSpend(
+  month: MonthState,
+  now: Date = new Date(),
+  recurring: RecurringTransaction[] = [],
+): number {
+  const remaining = monthRemaining(month, recurring);
   const days = daysRemainingIn(month.monthKey, now);
   const perDay = remaining / days;
 
@@ -181,15 +219,21 @@ function daysElapsedIn(monthKey: string, now: Date = new Date()): number {
  * The 5% dead-zone stops the chip flip-flopping day-to-day; it's a mood
  * indicator, not an accountant.
  */
-export function paceStatus(month: MonthState, now: Date = new Date()): Pace {
-  if (todaysSafeToSpend(month, now) <= 0) return 'atLimit';
+export function paceStatus(
+  month: MonthState,
+  now: Date = new Date(),
+  recurring: RecurringTransaction[] = [],
+): Pace {
+  if (todaysSafeToSpend(month, now, recurring) <= 0) return 'atLimit';
   const budget = monthSafeToSpend(month.plan);
   if (budget <= 0) return 'onPace';
   const elapsed = daysElapsedIn(month.monthKey, now);
   const total = elapsed + daysRemainingIn(month.monthKey, now);
   if (elapsed <= 0) return 'onPace'; // day 1 — nothing to judge against
   const suggested = budget * (elapsed / total);
-  const spent = totalSpent(month);
+  // Count the reserved-but-not-yet-fired recurring as "already committed" so
+  // the pace read matches what the user sees in the hero.
+  const spent = totalSpent(month) + pendingRecurring(recurring, month.monthKey);
   const delta = (spent - suggested) / Math.max(1, suggested);
   if (delta <= -0.05) return 'ahead';
   if (delta >= 0.05) return 'behind';

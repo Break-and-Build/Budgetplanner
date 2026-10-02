@@ -126,6 +126,13 @@ export interface MonthState {
   reflection?: ReflectionData;
   /** ISO timestamp. Present only when the user has closed out the month. */
   closedAt?: string;
+  /**
+   * True when the month was created by rolling forward and the user hasn't yet
+   * confirmed its plan. Home surfaces a review banner while this is set; it
+   * flips to false (or is removed) once the user confirms the plan is right.
+   * Optional for backwards-compat with blobs saved before this flag existed.
+   */
+  needsReview?: boolean;
 }
 
 /**
