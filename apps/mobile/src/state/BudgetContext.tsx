@@ -140,6 +140,13 @@ interface BudgetContextValue {
   /** Session-only flag — true once the banner has been dismissed this run. */
   monthCloseBannerDismissed: boolean;
   dismissMonthCloseBanner: () => void;
+  /**
+   * Clear the current month's needsReview flag — called by the Home review
+   * banner's "Looks good" button when the user is happy with the plan as
+   * carried from last month and doesn't want to edit it. `setPlan` clears
+   * the same flag implicitly on save.
+   */
+  confirmReview: () => void;
 
   // ─── Destructive (testing + Settings) ─────────────────────────────────────
   /** Wipe everything to a clean blob (no currency, no plan). */
@@ -315,7 +322,10 @@ export function BudgetProvider({ children }: { children: React.ReactNode }) {
   const setPlan = useCallback((plan: BudgetPlan) => {
     setBlob((prev) => ({
       ...prev,
-      current: { ...prev.current, plan },
+      // Saving a plan is a review act — a user who reaches Save has
+      // confirmed the plan is theirs, so clear the needsReview flag the
+      // roll-forward set.
+      current: { ...prev.current, plan, needsReview: false },
       setupComplete: true,
       setupStep: undefined,
     }));
@@ -454,6 +464,13 @@ export function BudgetProvider({ children }: { children: React.ReactNode }) {
   const [monthCloseBannerDismissed, setBannerDismissed] = useState(false);
   const dismissMonthCloseBanner = useCallback(() => setBannerDismissed(true), []);
 
+  const confirmReview = useCallback(() => {
+    setBlob((prev) => ({
+      ...prev,
+      current: { ...prev.current, needsReview: false },
+    }));
+  }, []);
+
   const closeMonth = useCallback((reflection: ReflectionData) => {
     setBlob((prev) => {
       const withReflection = {
@@ -518,6 +535,7 @@ export function BudgetProvider({ children }: { children: React.ReactNode }) {
       closeMonth,
       monthCloseBannerDismissed,
       dismissMonthCloseBanner,
+      confirmReview,
       resetAll,
       resetCurrentMonth,
       fastLogVisible,
@@ -553,6 +571,7 @@ export function BudgetProvider({ children }: { children: React.ReactNode }) {
       closeMonth,
       monthCloseBannerDismissed,
       dismissMonthCloseBanner,
+      confirmReview,
       resetAll,
       resetCurrentMonth,
       fastLogVisible,

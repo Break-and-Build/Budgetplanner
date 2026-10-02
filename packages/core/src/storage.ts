@@ -248,14 +248,18 @@ export function rollForward(blob: BudgetBlob, now: Date = new Date()): BudgetBlo
   const next: MonthState = {
     monthKey: nextKey,
     plan: {
-      // Carry the plan as-is; the RollForward screen will have already
-      // captured any edits before this call.
+      // Carry the plan as a starting point. The user is expected to review
+      // and confirm it (or edit it) before the month is considered "theirs"
+      // — `needsReview: true` below drives the banner on Home that catches
+      // them if they skipped the Month-Close ritual's review step. Saving
+      // the plan via AdjustPlan clears the flag.
       income: blob.current.plan.income,
       priorities: blob.current.plan.priorities,
       savings: blob.current.plan.savings,
       categories: blob.current.plan.categories,
     },
     transactions: [],
+    needsReview: true,
   };
   return {
     ...blob,
@@ -347,4 +351,5 @@ if (typeof __DEV__ !== 'undefined' && __DEV__) {
   console.assert(!!rolled.history[0].closedAt, 'closedAt stamped');
   console.assert(rolled.current.transactions.length === 0, 'transactions zeroed');
   console.assert(rolled.current.plan.income.length === 1, 'plan carried forward');
+  console.assert(rolled.current.needsReview === true, 'rolled month flagged for review');
 }

@@ -99,6 +99,7 @@ export function HomeScreen() {
     togglePrivacyMode,
     splashHidden,
     recurring,
+    confirmReview,
   } = useBudget();
 
   const now = new Date();
@@ -373,6 +374,57 @@ export function HomeScreen() {
             ) : null}
           </View>
         </View>
+
+        {/* ─── Review-your-plan banner (fresh month after roll-forward) ─── */}
+        {currentMonth.needsReview ? (
+          <View
+            style={{
+              marginHorizontal: t.space[4],
+              marginBottom: t.space[4],
+              padding: t.space[4],
+              backgroundColor: t.color.bg.elevated,
+              borderRadius: t.radii.lg,
+              borderWidth: StyleSheet.hairlineWidth,
+              borderColor: t.color.brand.base,
+            }}
+          >
+            <Text
+              allowFontScaling
+              maxFontSizeMultiplier={t.a11y.maxFontScale}
+              style={[t.type.headline, { color: t.color.text.primary }]}
+            >
+              Review your {monthLabelFromKey(currentMonth.monthKey)} plan
+            </Text>
+            <Text
+              allowFontScaling
+              maxFontSizeMultiplier={t.a11y.maxFontScale}
+              style={[
+                t.type.footnote,
+                { color: t.color.text.secondary, marginTop: t.space[1] },
+              ]}
+            >
+              Carried from last month. Tweak income, priorities, and recurring
+              bills — or confirm as-is — before you start logging.
+            </Text>
+            <View style={{ flexDirection: 'row', gap: t.space[3], marginTop: t.space[4] }}>
+              <View style={{ flex: 1 }}>
+                <Button variant="secondary" onPress={confirmReview} fullWidth>
+                  Looks good
+                </Button>
+              </View>
+              <View style={{ flex: 2 }}>
+                <Button
+                  variant="primary"
+                  onPress={() => nav.navigate('AdjustPlan')}
+                  fullWidth
+                  accessibilityLabel="Review and edit this month's plan"
+                >
+                  Review plan
+                </Button>
+              </View>
+            </View>
+          </View>
+        ) : null}
 
         {/* ─── Month-close banner (unchanged) ───────────────────────────── */}
         {bannerVisible ? (
