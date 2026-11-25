@@ -22,6 +22,11 @@
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
         "NSFaceIDUsageDescription": "Budget Tracker uses Face ID to unlock the app so only you can see your budget."
+      },
+      "entitlements": {
+        "com.apple.security.application-groups": [
+          "group.com.breakandbuild.budgettracker"
+        ]
       }
     },
     "android": {

@@ -1,15 +1,26 @@
 // BudgetWidget — WidgetKit extension for Budget Tracker.
 //
-// MVP (v1.2-α commit 1): hardcoded entry so the extension compiles and the
-// widget picker surfaces a tile. Real data arrives in commit 2 via an App
-// Group + shared UserDefaults that the RN app writes to on every budget
-// change.
+// Reads state from the shared App Group's UserDefaults (written by the RN
+// app via modules/widget-bridge). The RN app calls WidgetCenter's reload
+// on every write so timeline refreshes are prompt; this timeline also
+// requests a fallback refresh every hour so the days-left counter stays
+// honest if the user doesn't open the app.
 //
 // Design matches Home's scan-first language: eyebrow in secondary, hero
-// number in semibold tabular digits, context line underneath.
+// number in semibold tabular digits, pace chip right-aligned, days-left
+// context line underneath.
 
 import WidgetKit
 import SwiftUI
+
+private let appGroup = "group.com.breakandbuild.budgettracker"
+
+private enum DefaultsKey {
+    static let amount = "widget.amount"
+    static let daysLeft = "widget.daysLeft"
+    static let pace = "widget.pace"
+    static let needsReview = "widget.needsReview"
+}
 
 // MARK: - Entry
 
@@ -28,34 +39,64 @@ enum PaceState: String {
     case behind = "Behind pace"
     case atLimit = "At today's limit"
     case needsReview = "Review your plan"
+
+    /// Parse the RN-side pace key. Unknown values fall back to onPace so a
+    /// future RN version introducing a new state can't crash an older widget.
+    init(fromKey key: String?) {
+        switch key {
+        case "ahead": self = .ahead
+        case "onPace": self = .onPace
+        case "behind": self = .behind
+        case "atLimit": self = .atLimit
+        case "needsReview": self = .needsReview
+        default: self = .onPace
+        }
+    }
 }
 
 // MARK: - Provider
 
-/// Supplies entries to WidgetKit. For the MVP we return one hardcoded entry
-/// and refresh every hour; the next commit swaps the hardcoded values for
-/// App-Group reads and widens the refresh triggers.
+/// Supplies entries to WidgetKit. Reads the current payload from the shared
+/// App Group on every refresh; the RN app triggers reloads via
+/// WidgetCenter.reloadAllTimelines() on every budget state change, and this
+/// timeline also schedules an hourly fallback so the widget never drifts
+/// more than an hour if the app hasn't been opened.
 struct BudgetProvider: TimelineProvider {
+    /// Placeholder shown while the OS is composing the widget gallery or
+    /// before any real data has been written. Deliberately generic so a
+    /// first-launch screenshot in Settings → Widgets still reads cleanly.
     func placeholder(in context: Context) -> BudgetEntry {
         BudgetEntry(
             date: Date(),
-            amount: "₦8,400",
-            daysLeft: 18,
-            pace: .ahead
+            amount: "—",
+            daysLeft: 0,
+            pace: .onPace
         )
     }
 
     func getSnapshot(in context: Context, completion: @escaping (BudgetEntry) -> Void) {
-        completion(placeholder(in: context))
+        completion(currentEntry())
     }
 
     func getTimeline(in context: Context, completion: @escaping (Timeline<BudgetEntry>) -> Void) {
-        let entry = placeholder(in: context)
-        // Refresh hourly for now; commit 2 lowers this and adds a RN-triggered
-        // reload via WidgetCenter.shared.reloadAllTimelines().
+        let entry = currentEntry()
         let nextRefresh = Calendar.current.date(byAdding: .hour, value: 1, to: entry.date)!
         let timeline = Timeline(entries: [entry], policy: .after(nextRefresh))
         completion(timeline)
+    }
+
+    /// Read the latest payload the RN app wrote into the shared container.
+    /// Falls back to "—" when the suite is missing or empty — a never-opened
+    /// install or a misconfigured entitlement, respectively.
+    private func currentEntry() -> BudgetEntry {
+        let defaults = UserDefaults(suiteName: appGroup)
+        let amount = defaults?.string(forKey: DefaultsKey.amount) ?? "—"
+        let daysLeft = defaults?.integer(forKey: DefaultsKey.daysLeft) ?? 0
+        let needsReview = defaults?.bool(forKey: DefaultsKey.needsReview) ?? false
+        let pace: PaceState = needsReview
+            ? .needsReview
+            : PaceState(fromKey: defaults?.string(forKey: DefaultsKey.pace))
+        return BudgetEntry(date: Date(), amount: amount, daysLeft: daysLeft, pace: pace)
     }
 }
 

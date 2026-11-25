@@ -17,4 +17,13 @@ module.exports = {
     $accent: '#5046E6',
   },
   deploymentTarget: '17.0',
+  // Shared with the main app so the widget can read UserDefaults the app
+  // writes via modules/widget-bridge. Group id must match both ends and
+  // must be registered under the Apple Developer team; EAS Managed
+  // Credentials provisions it automatically on first build.
+  entitlements: {
+    'com.apple.security.application-groups': [
+      'group.com.breakandbuild.budgettracker',
+    ],
+  },
 };

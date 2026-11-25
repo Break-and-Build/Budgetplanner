@@ -1,0 +1,7 @@
+{
+  "name": "widget-bridge",
+  "version": "1.0.0",
+  "description": "App-group UserDefaults bridge + WidgetKit reload trigger. Read from JS, written to by the main app, read from by the Budget Widget target.",
+  "main": "index.ts",
+  "private": true
+}
