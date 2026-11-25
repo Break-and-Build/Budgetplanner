@@ -59,7 +59,8 @@
           "color": "#5046E6"
         }
       ],
-      "expo-secure-store"
+      "expo-secure-store",
+      "@bacons/apple-targets"
     ],
     "extra": {
       "eas": {

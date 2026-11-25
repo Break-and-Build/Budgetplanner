@@ -12,6 +12,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@bacons/apple-targets": "^5.0.0",
     "@budgetplanner/core": "file:../../packages/core",
     "@expo-google-fonts/poppins": "^0.4.1",
     "@react-native-async-storage/async-storage": "2.2.0",
