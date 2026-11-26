@@ -11,7 +11,14 @@
 /** @type {import('@bacons/apple-targets').Config} */
 module.exports = {
   type: 'widget',
-  name: 'Budget Widget',
+  // Keep the display name identical to the sanitized productName. EAS's
+  // configure-xcode-project phase looks up the target by its Xcode `name`
+  // field (set from this `name` value) when assigning the provisioning
+  // profile, but its `appExtensions.targetName` metadata is derived from
+  // productName (= sanitizeNameForNonDisplayUse(name) — spaces stripped).
+  // When the two diverge, EAS errors with:
+  //   "Could not find target 'BudgetWidget' in project.pbxproj"
+  name: 'BudgetWidget',
   icon: '../../assets/icon.png',
   colors: {
     $accent: '#5046E6',
