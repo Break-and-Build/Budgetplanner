@@ -103,6 +103,9 @@ struct BudgetProvider: TimelineProvider {
 // MARK: - Views
 
 /// Small widget (systemSmall): eyebrow, hero number, days-left line.
+/// All three sit in one tight stack at the top-left rather than being pushed
+/// to the frame edges with a `Spacer()` — the empty mid-tile space the
+/// earlier version left behind read as uncommitted layout.
 struct BudgetWidgetSmallView: View {
     let entry: BudgetEntry
 
@@ -118,7 +121,7 @@ struct BudgetWidgetSmallView: View {
                 .foregroundStyle(.primary)
                 .minimumScaleFactor(0.6)
                 .lineLimit(1)
-            Spacer(minLength: 0)
+                .padding(.top, 2)
             Text("\(entry.daysLeft) days left")
                 .font(.system(size: 12))
                 .foregroundStyle(.secondary)
@@ -129,6 +132,8 @@ struct BudgetWidgetSmallView: View {
 }
 
 /// Medium widget (systemMedium): same hero plus pace chip on the right.
+/// Content sits as a tight top-aligned stack (no interior Spacer) — the
+/// earlier version left a visible empty band below the subline on device.
 struct BudgetWidgetMediumView: View {
     let entry: BudgetEntry
 
@@ -148,7 +153,7 @@ struct BudgetWidgetMediumView: View {
                 .foregroundStyle(.primary)
                 .minimumScaleFactor(0.5)
                 .lineLimit(1)
-            Spacer(minLength: 0)
+                .padding(.top, 2)
             Text("\(entry.daysLeft) days left this month")
                 .font(.system(size: 12))
                 .foregroundStyle(.secondary)
@@ -188,22 +193,28 @@ struct PaceChip: View {
         }
     }
 
+    // Chip background: a stronger tint than the earlier 0.22 opacity so the
+    // pill reads as a deliberate semantic surface on the widget's dark
+    // ground, not an incidental grey.
     private var background: Color {
         switch pace {
-        case .ahead: return Color(red: 0.55, green: 0.80, blue: 0.61).opacity(0.22)
-        case .onPace: return Color.secondary.opacity(0.14)
-        case .behind: return Color(red: 0.89, green: 0.70, blue: 0.42).opacity(0.20)
-        case .atLimit: return Color(red: 0.88, green: 0.48, blue: 0.48).opacity(0.20)
-        case .needsReview: return Color.secondary.opacity(0.14)
+        case .ahead: return Color(red: 0.36, green: 0.73, blue: 0.47).opacity(0.28)
+        case .onPace: return Color.secondary.opacity(0.18)
+        case .behind: return Color(red: 0.90, green: 0.63, blue: 0.30).opacity(0.28)
+        case .atLimit: return Color(red: 0.90, green: 0.38, blue: 0.38).opacity(0.28)
+        case .needsReview: return Color.secondary.opacity(0.18)
         }
     }
 
+    // Chip foreground: punchier, more-saturated versions of the earlier
+    // colours — the widget's dark-mode surface washes the old tints out so
+    // "Ahead of pace" read as grey rather than green on real devices.
     private var foreground: Color {
         switch pace {
-        case .ahead: return Color(red: 0.73, green: 0.89, blue: 0.76)
+        case .ahead: return Color(red: 0.62, green: 0.95, blue: 0.70)
         case .onPace: return .primary
-        case .behind: return Color(red: 0.89, green: 0.70, blue: 0.42)
-        case .atLimit: return Color(red: 0.88, green: 0.48, blue: 0.48)
+        case .behind: return Color(red: 0.98, green: 0.78, blue: 0.40)
+        case .atLimit: return Color(red: 0.98, green: 0.55, blue: 0.55)
         case .needsReview: return .secondary
         }
     }
