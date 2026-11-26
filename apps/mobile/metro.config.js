@@ -13,8 +13,10 @@ const workspaceRoot = path.resolve(projectRoot, '../..');
 const config = getDefaultConfig(projectRoot);
 
 // 1. Watch the entire workspace for changes (so edits in packages/core
-//    trigger Fast Refresh in the mobile app).
-config.watchFolders = [workspaceRoot];
+//    trigger Fast Refresh in the mobile app). Extend rather than replace
+//    the preset's defaults so expo-doctor's "watchFolders contains Expo's
+//    defaults" check stays green on EAS Build.
+config.watchFolders = [...(config.watchFolders || []), workspaceRoot];
 
 // 2. Tell Metro where to look for node_modules: project-local first,
 //    workspace root second. Hoisted modules live at the workspace root.

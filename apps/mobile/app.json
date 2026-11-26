@@ -18,6 +18,7 @@
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.breakandbuild.budgettracker",
+      "appleTeamId": "VTF63ZP6XD",
       "icon": "./assets/AppIcon.icon",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
