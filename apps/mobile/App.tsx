@@ -65,6 +65,7 @@ import { AppLockSetupScreen } from './src/screens/AppLockSetupScreen';
 import { AppLockProvider } from './src/state/AppLockContext';
 import { FastLogSheet } from './src/screens/FastLogSheet';
 import { UndoSnackbar } from './src/components/UndoSnackbar';
+import { useWidgetSync } from './src/platform/useWidgetSync';
 
 const RootStack = createNativeStackNavigator<RootStackParamList>();
 const Tabs = createBottomTabNavigator<MainTabsParamList>();
@@ -146,6 +147,10 @@ function Root({ fontsLoaded }: { fontsLoaded: boolean }) {
   const { isHydrated, blob, markSplashHidden } = useBudget();
   const t = useTokens();
   const isDark = useIsDark();
+
+  // Keep the iOS widget's cached payload in step with the live budget state.
+  // No-op on Android and in environments without the native module.
+  useWidgetSync();
 
   // Hide the native splash once BOTH font loading and AsyncStorage hydration
   // have finished, but never before the minimum total splash time has elapsed.

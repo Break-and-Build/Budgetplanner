@@ -2,7 +2,7 @@
   "expo": {
     "name": "Budget Tracker",
     "slug": "budgetplanner-mobile",
-    "version": "1.1.4",
+    "version": "1.1.5",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
@@ -18,10 +18,16 @@
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.breakandbuild.budgettracker",
+      "appleTeamId": "VTF63ZP6XD",
       "icon": "./assets/AppIcon.icon",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
         "NSFaceIDUsageDescription": "Budget Tracker uses Face ID to unlock the app so only you can see your budget."
+      },
+      "entitlements": {
+        "com.apple.security.application-groups": [
+          "group.com.breakandbuild.budgettracker"
+        ]
       }
     },
     "android": {
@@ -59,7 +65,8 @@
           "color": "#5046E6"
         }
       ],
-      "expo-secure-store"
+      "expo-secure-store",
+      "@bacons/apple-targets"
     ],
     "extra": {
       "eas": {
