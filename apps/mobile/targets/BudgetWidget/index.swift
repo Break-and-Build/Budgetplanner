@@ -235,8 +235,83 @@ struct BudgetWidgetEntryView: View {
         switch family {
         case .systemSmall:
             BudgetWidgetSmallView(entry: entry)
+        case .accessoryInline:
+            BudgetWidgetInlineView(entry: entry)
+        case .accessoryRectangular:
+            BudgetWidgetRectangularView(entry: entry)
+        case .accessoryCircular:
+            BudgetWidgetCircularView(entry: entry)
         default:
             BudgetWidgetMediumView(entry: entry)
+        }
+    }
+}
+
+// MARK: - Lock-screen (iOS 16+) views
+
+/// Inline accessory — one line of text that sits next to the clock. iOS
+/// renders this as plain text with the system font; no colour or icons.
+struct BudgetWidgetInlineView: View {
+    let entry: BudgetEntry
+
+    var body: some View {
+        Text("Safe today \(entry.amount)")
+    }
+}
+
+/// Rectangular accessory — compact three-line stack below the clock.
+/// Space is tight (~160×80 points), so no pace chip; eyebrow carries the
+/// pace summary as text and the amount is the dominant line.
+struct BudgetWidgetRectangularView: View {
+    let entry: BudgetEntry
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 1) {
+            Text("SAFE TODAY" + paceSuffix)
+                .font(.system(size: 10, weight: .medium))
+                .widgetAccentable()
+            Text(entry.amount)
+                .font(.system(size: 20, weight: .semibold))
+                .monospacedDigit()
+                .minimumScaleFactor(0.6)
+                .lineLimit(1)
+            Text("\(entry.daysLeft) days left")
+                .font(.system(size: 11))
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private var paceSuffix: String {
+        switch entry.pace {
+        case .ahead: return " · AHEAD"
+        case .behind: return " · BEHIND"
+        case .atLimit: return " · AT LIMIT"
+        case .needsReview: return " · REVIEW"
+        case .onPace: return ""
+        }
+    }
+}
+
+/// Circular accessory — a small round badge. Shows just the amount in a
+/// compact form; if the formatted string is too long we fall back to days-
+/// remaining as a terser signal.
+struct BudgetWidgetCircularView: View {
+    let entry: BudgetEntry
+
+    var body: some View {
+        ZStack {
+            AccessoryWidgetBackground()
+            VStack(spacing: 0) {
+                Text(entry.amount)
+                    .font(.system(size: 12, weight: .semibold))
+                    .monospacedDigit()
+                    .minimumScaleFactor(0.5)
+                    .lineLimit(1)
+                Text("\(entry.daysLeft)d")
+                    .font(.system(size: 9))
+                    .foregroundStyle(.secondary)
+            }
+            .padding(4)
         }
     }
 }
@@ -259,7 +334,15 @@ struct BudgetWidget: Widget {
         }
         .configurationDisplayName("Budget Tracker")
         .description("Your safe-to-spend today, at a glance.")
-        .supportedFamilies([.systemSmall, .systemMedium])
+        .supportedFamilies([
+            .systemSmall,
+            .systemMedium,
+            // Lock-screen widgets (iOS 16+). iOS silently ignores families it
+            // doesn't support, so older OS installs still work fine.
+            .accessoryInline,
+            .accessoryRectangular,
+            .accessoryCircular,
+        ])
     }
 }
 
