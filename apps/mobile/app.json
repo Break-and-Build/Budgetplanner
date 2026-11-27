@@ -66,7 +66,27 @@
         }
       ],
       "expo-secure-store",
-      "@bacons/apple-targets"
+      "@bacons/apple-targets",
+      [
+        "react-native-android-widget",
+        {
+          "widgets": [
+            {
+              "name": "BudgetWidget",
+              "label": "Budget Tracker",
+              "description": "Your safe-to-spend today, at a glance.",
+              "minWidth": "140dp",
+              "minHeight": "110dp",
+              "targetCellWidth": 2,
+              "targetCellHeight": 2,
+              "maxResizeWidth": "320dp",
+              "maxResizeHeight": "110dp",
+              "resizeMode": "horizontal",
+              "widgetCategory": "home_screen"
+            }
+          ]
+        }
+      ]
     ],
     "extra": {
       "eas": {
