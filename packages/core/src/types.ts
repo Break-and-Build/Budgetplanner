@@ -167,6 +167,51 @@ export interface RecurringTransaction {
 }
 
 /**
+ * A single contribution toward a goal. Goals track their own contribution
+ * log rather than linking to monthly transactions — contributing to a goal
+ * is a separate act from spending, even if the money moves in the same
+ * direction, and we want goal progress to be independent of the transaction
+ * list's monthly reset cycle.
+ */
+export interface GoalContribution {
+  id: string;
+  amount: number;
+  /** ISO timestamp. */
+  loggedAt: string;
+  note?: string;
+}
+
+/**
+ * A named savings goal — "Lagos trip ₦400k by June". The companion to
+ * safe-to-spend: safe-to-spend answers "can I spend?", goals answer
+ * "what am I saving toward?". Progress = sum(contributions) / targetAmount.
+ *
+ * `targetDate` is optional — not every goal has a hard deadline ("emergency
+ * fund ₦500k" has no date). When present, UI can show "N months to go" and
+ * compute the implied per-month contribution rate.
+ */
+export interface Goal {
+  id: string;
+  name: string;
+  /** Target amount in the user's chosen currency. */
+  targetAmount: number;
+  /** Optional ISO date (YYYY-MM-DD) by which the user wants to hit the target. */
+  targetDate?: string;
+  /** Hex colour from the palette, so the goal can share the category-tint vocabulary. */
+  color: string;
+  /** ISO timestamp the goal was created. */
+  createdAt: string;
+  /** All contributions made toward this goal, oldest first. */
+  contributions: GoalContribution[];
+  /**
+   * Set when the user marks the goal reached (or deletes a reached goal
+   * without hitting the target). Archived goals don't appear in the active
+   * list but stay in history for the record.
+   */
+  archivedAt?: string;
+}
+
+/**
  * The persisted shape. One blob per device. `current` is the active month;
  * `history` is closed months in reverse-chronological order.
  */
@@ -177,6 +222,11 @@ export interface BudgetBlob {
   history: MonthState[];
   /** Recurring subscription rules. Auto-generates transactions on their day. */
   recurring: RecurringTransaction[];
+  /**
+   * Named savings goals. Optional on older blobs (schemaVersion 2 shipped
+   * before goals existed); hydrator defaults to [].
+   */
+  goals?: Goal[];
   /** Where the setup wizard left off, if it's mid-flow. 1-indexed, 1..6. */
   setupStep?: number;
   /** True once the user has completed setup at least once. Drives FirstRun gate. */

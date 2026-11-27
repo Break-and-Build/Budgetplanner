@@ -37,6 +37,8 @@ import type {
   BudgetBlobV1,
   BudgetPlan,
   CategoryDef,
+  Goal,
+  GoalContribution,
   MonthState,
   RecurringTransaction,
   ReflectionData,
@@ -46,6 +48,8 @@ import type {
 import {
   emptyBudgetBlob,
   migrateV1ToV2,
+  newGoalContributionId,
+  newGoalId,
   parseBudgetBlob,
   rollForward,
   runRecurringRules,
@@ -132,6 +136,14 @@ interface BudgetContextValue {
   addRecurring: (rule: Omit<RecurringTransaction, 'id' | 'createdAt'>) => void;
   updateRecurring: (id: string, patch: Partial<RecurringTransaction>) => void;
   removeRecurring: (id: string) => void;
+
+  // ─── Goals (v1.3) ─────────────────────────────────────────────────────────
+  goals: Goal[];
+  addGoal: (goal: Omit<Goal, 'id' | 'createdAt' | 'contributions'>) => void;
+  updateGoal: (id: string, patch: Partial<Goal>) => void;
+  removeGoal: (id: string) => void;
+  contributeToGoal: (id: string, amount: number, note?: string) => void;
+  archiveGoal: (id: string) => void;
 
   // ─── Reminders (local notifications, on by default) ───────────────────────
   /** Daily reminder times. Reminders fire automatically once the OS permits. */
@@ -432,6 +444,62 @@ export function BudgetProvider({ children }: { children: React.ReactNode }) {
     }));
   }, []);
 
+  // ─── Goals (v1.3) ─────────────────────────────────────────────────────────
+  const goals = blob.goals ?? [];
+
+  const addGoal = useCallback(
+    (goal: Omit<Goal, 'id' | 'createdAt' | 'contributions'>) => {
+      const full: Goal = {
+        ...goal,
+        id: newGoalId(),
+        createdAt: new Date().toISOString(),
+        contributions: [],
+      };
+      setBlob((prev) => ({ ...prev, goals: [...(prev.goals ?? []), full] }));
+    },
+    [],
+  );
+
+  const updateGoal = useCallback((id: string, patch: Partial<Goal>) => {
+    setBlob((prev) => ({
+      ...prev,
+      goals: (prev.goals ?? []).map((g) => (g.id === id ? { ...g, ...patch } : g)),
+    }));
+  }, []);
+
+  const removeGoal = useCallback((id: string) => {
+    setBlob((prev) => ({
+      ...prev,
+      goals: (prev.goals ?? []).filter((g) => g.id !== id),
+    }));
+  }, []);
+
+  const contributeToGoal = useCallback((id: string, amount: number, note?: string) => {
+    const contribution: GoalContribution = {
+      id: newGoalContributionId(),
+      amount,
+      loggedAt: new Date().toISOString(),
+      note,
+    };
+    setBlob((prev) => ({
+      ...prev,
+      goals: (prev.goals ?? []).map((g) =>
+        g.id === id
+          ? { ...g, contributions: [...g.contributions, contribution] }
+          : g,
+      ),
+    }));
+  }, []);
+
+  const archiveGoal = useCallback((id: string) => {
+    setBlob((prev) => ({
+      ...prev,
+      goals: (prev.goals ?? []).map((g) =>
+        g.id === id ? { ...g, archivedAt: new Date().toISOString() } : g,
+      ),
+    }));
+  }, []);
+
   // ─── Reminders ────────────────────────────────────────────────────────────
   const reminderTimes = useMemo(
     () => normalizeReminderTimes(blob.reminderTimes ?? defaultReminderTimes()),
@@ -556,6 +624,12 @@ export function BudgetProvider({ children }: { children: React.ReactNode }) {
       addRecurring,
       updateRecurring,
       removeRecurring,
+      goals,
+      addGoal,
+      updateGoal,
+      removeGoal,
+      contributeToGoal,
+      archiveGoal,
       reminderTimes,
       setReminderTimes,
       notificationsGranted,
@@ -592,6 +666,12 @@ export function BudgetProvider({ children }: { children: React.ReactNode }) {
       addRecurring,
       updateRecurring,
       removeRecurring,
+      goals,
+      addGoal,
+      updateGoal,
+      removeGoal,
+      contributeToGoal,
+      archiveGoal,
       reminderTimes,
       setReminderTimes,
       notificationsGranted,
