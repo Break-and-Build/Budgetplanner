@@ -77,3 +77,13 @@ export {
   defaultReminderTimes,
   normalizeReminderTimes,
 } from './reminders';
+
+// Smart reminder content — picks body copy for a daily notification from
+// the current budget state. Pure; the mobile-side scheduler plugs it in.
+export { smartReminderContent } from './smart-reminders';
+export type {
+  SmartReminderContext,
+  SmartReminderCopy,
+  SmartReminderCategorySpend,
+  SmartReminderRecurring,
+} from './smart-reminders';

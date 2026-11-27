@@ -16,7 +16,7 @@
 
 import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
-import type { ReminderTime } from '@budgetplanner/core';
+import type { ReminderTime, SmartReminderCopy } from '@budgetplanner/core';
 
 /** Identifier prefix for our daily reminders (one per configured time). */
 const DAILY_PREFIX = 'budgetplanner.reminder.daily';
@@ -77,7 +77,10 @@ async function cancelDailyReminders(): Promise<void> {
  * configured time. Idempotent — safe to call on every app launch and whenever
  * the times change.
  */
-export async function scheduleDailyReminders(times: ReminderTime[]): Promise<void> {
+export async function scheduleDailyReminders(
+  times: ReminderTime[],
+  copy: SmartReminderCopy,
+): Promise<void> {
   await cancelDailyReminders();
   for (let i = 0; i < times.length; i++) {
     const { hour, minute } = times[i];
@@ -87,8 +90,8 @@ export async function scheduleDailyReminders(times: ReminderTime[]): Promise<voi
         // NOTE: never pass `sound: null` — the native module expects
         // `boolean | string`, and null makes scheduleNotificationAsync reject.
         // Omitting `sound` is what gives us a silent notification on iOS.
-        title: "Today's budget",
-        body: 'Tap to log the day and see what you have left to spend.',
+        title: copy.title,
+        body: copy.body,
         data: { type: 'daily' },
       },
       // DAILY is the purpose-built "every day at HH:MM" trigger. It repeats on
@@ -139,8 +142,11 @@ export async function scheduleMonthEndReminder(): Promise<void> {
  * dropped them — happens sometimes after reboot — and whenever the user changes
  * the reminder times.
  */
-export async function scheduleAllReminders(times: ReminderTime[]): Promise<void> {
-  await scheduleDailyReminders(times);
+export async function scheduleAllReminders(
+  times: ReminderTime[],
+  dailyCopy: SmartReminderCopy,
+): Promise<void> {
+  await scheduleDailyReminders(times, dailyCopy);
   await scheduleMonthEndReminder();
 }
 
