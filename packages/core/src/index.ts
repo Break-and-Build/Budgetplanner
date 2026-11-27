@@ -19,7 +19,24 @@ export type {
   BudgetBlob,
   BudgetBlobV1,
   RecurringTransaction,
+  // v1.3 savings goals
+  Goal,
+  GoalContribution,
 } from './types';
+
+// Goal helpers (v1.3 savings goals)
+export {
+  goalContributed,
+  goalRemaining,
+  goalProgress,
+  goalReached,
+  goalPace,
+  newGoalId,
+  newGoalContributionId,
+  addGoalContribution,
+  removeGoalContribution,
+} from './goals';
+export type { GoalPace } from './goals';
 
 // Category helpers (percentage-based custom categories)
 export {
@@ -77,3 +94,13 @@ export {
   defaultReminderTimes,
   normalizeReminderTimes,
 } from './reminders';
+
+// Smart reminder content — picks body copy for a daily notification from
+// the current budget state. Pure; the mobile-side scheduler plugs it in.
+export { smartReminderContent } from './smart-reminders';
+export type {
+  SmartReminderContext,
+  SmartReminderCopy,
+  SmartReminderCategorySpend,
+  SmartReminderRecurring,
+} from './smart-reminders';

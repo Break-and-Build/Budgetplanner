@@ -42,6 +42,11 @@ export type RootStackParamList = {
   ManageCategories: undefined;
   /** Create/confirm a PIN to enable the app lock, or change an existing PIN. */
   AppLockSetup: { mode?: 'enable' | 'change' } | undefined;
+
+  /** v1.3 — list of named savings goals. */
+  GoalsList: undefined;
+  /** v1.3 — single goal edit / contribute. Pass `id: 'new'` to create. */
+  GoalDetail: { id: string };
 };
 
 declare global {

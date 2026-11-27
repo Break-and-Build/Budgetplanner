@@ -73,6 +73,7 @@ export function emptyBudgetBlob(currency: string, now: Date = new Date()): Budge
     },
     history: [],
     recurring: [],
+    goals: [],
     setupStep: 1,
     setupComplete: false,
   };
@@ -129,6 +130,7 @@ export function migrateV1ToV2(v1: BudgetBlobV1 | null | undefined, now: Date = n
     current,
     history: [],
     recurring: [],
+    goals: [],
     setupStep: setupComplete ? undefined : Math.min(6, Math.max(1, v1.currentStep ?? 1)),
     setupComplete,
   };
@@ -154,6 +156,14 @@ export function parseBudgetBlob(raw: unknown, now: Date = new Date()): BudgetBlo
       // Recurring was added after schemaVersion 2 shipped — older v2 blobs
       // won't have it; default to empty array for forward-compat.
       recurring: Array.isArray(v2.recurring) ? v2.recurring : [],
+      // Goals shipped in v1.3 (also a schemaVersion-2 extension); same
+      // forward-compat default.
+      goals: Array.isArray(v2.goals)
+        ? v2.goals.map((g) => ({
+            ...g,
+            contributions: Array.isArray(g.contributions) ? g.contributions : [],
+          }))
+        : [],
       setupStep: typeof v2.setupStep === 'number' ? v2.setupStep : undefined,
       setupComplete: !!v2.setupComplete,
       // Daily reminder times. Prefer the new array; fall back to the old

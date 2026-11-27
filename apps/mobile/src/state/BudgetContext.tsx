@@ -37,6 +37,8 @@ import type {
   BudgetBlobV1,
   BudgetPlan,
   CategoryDef,
+  Goal,
+  GoalContribution,
   MonthState,
   RecurringTransaction,
   ReflectionData,
@@ -46,9 +48,12 @@ import type {
 import {
   emptyBudgetBlob,
   migrateV1ToV2,
+  newGoalContributionId,
+  newGoalId,
   parseBudgetBlob,
   rollForward,
   runRecurringRules,
+  smartReminderContent,
   symbolFor,
   MAX_CATEGORIES,
   MIN_CATEGORIES,
@@ -58,6 +63,15 @@ import {
   defaultReminderTimes,
   normalizeReminderTimes,
 } from '@budgetplanner/core';
+import type { SmartReminderCopy } from '@budgetplanner/core';
+
+import {
+  allocatedByCategory,
+  daysRemainingIn,
+  paceStatus,
+  spentByCategory,
+  todaysSafeToSpend,
+} from './selectors';
 
 /** Stable AsyncStorage key for the v2 blob. */
 const STORAGE_KEY_V2 = 'budgetplanner:mobile:v2';
@@ -122,6 +136,14 @@ interface BudgetContextValue {
   addRecurring: (rule: Omit<RecurringTransaction, 'id' | 'createdAt'>) => void;
   updateRecurring: (id: string, patch: Partial<RecurringTransaction>) => void;
   removeRecurring: (id: string) => void;
+
+  // ─── Goals (v1.3) ─────────────────────────────────────────────────────────
+  goals: Goal[];
+  addGoal: (goal: Omit<Goal, 'id' | 'createdAt' | 'contributions'>) => void;
+  updateGoal: (id: string, patch: Partial<Goal>) => void;
+  removeGoal: (id: string) => void;
+  contributeToGoal: (id: string, amount: number, note?: string) => void;
+  archiveGoal: (id: string) => void;
 
   // ─── Reminders (local notifications, on by default) ───────────────────────
   /** Daily reminder times. Reminders fire automatically once the OS permits. */
@@ -422,6 +444,62 @@ export function BudgetProvider({ children }: { children: React.ReactNode }) {
     }));
   }, []);
 
+  // ─── Goals (v1.3) ─────────────────────────────────────────────────────────
+  const goals = blob.goals ?? [];
+
+  const addGoal = useCallback(
+    (goal: Omit<Goal, 'id' | 'createdAt' | 'contributions'>) => {
+      const full: Goal = {
+        ...goal,
+        id: newGoalId(),
+        createdAt: new Date().toISOString(),
+        contributions: [],
+      };
+      setBlob((prev) => ({ ...prev, goals: [...(prev.goals ?? []), full] }));
+    },
+    [],
+  );
+
+  const updateGoal = useCallback((id: string, patch: Partial<Goal>) => {
+    setBlob((prev) => ({
+      ...prev,
+      goals: (prev.goals ?? []).map((g) => (g.id === id ? { ...g, ...patch } : g)),
+    }));
+  }, []);
+
+  const removeGoal = useCallback((id: string) => {
+    setBlob((prev) => ({
+      ...prev,
+      goals: (prev.goals ?? []).filter((g) => g.id !== id),
+    }));
+  }, []);
+
+  const contributeToGoal = useCallback((id: string, amount: number, note?: string) => {
+    const contribution: GoalContribution = {
+      id: newGoalContributionId(),
+      amount,
+      loggedAt: new Date().toISOString(),
+      note,
+    };
+    setBlob((prev) => ({
+      ...prev,
+      goals: (prev.goals ?? []).map((g) =>
+        g.id === id
+          ? { ...g, contributions: [...g.contributions, contribution] }
+          : g,
+      ),
+    }));
+  }, []);
+
+  const archiveGoal = useCallback((id: string) => {
+    setBlob((prev) => ({
+      ...prev,
+      goals: (prev.goals ?? []).map((g) =>
+        g.id === id ? { ...g, archivedAt: new Date().toISOString() } : g,
+      ),
+    }));
+  }, []);
+
   // ─── Reminders ────────────────────────────────────────────────────────────
   const reminderTimes = useMemo(
     () => normalizeReminderTimes(blob.reminderTimes ?? defaultReminderTimes()),
@@ -442,6 +520,12 @@ export function BudgetProvider({ children }: { children: React.ReactNode }) {
   // Reminders are on by default. Once setup is done, request permission (once)
   // and schedule at the chosen times — and re-schedule on every launch and time
   // change, since the OS can drop scheduled notifications after reboots/updates.
+  //
+  // The daily body copy is state-aware: computed via smartReminderContent so
+  // the push actually says something useful (over-today, needs-review, pace
+  // slip, hot category, recurring-due) instead of a generic "tap to log" nag.
+  // We re-run the effect on every budget state change so new logged
+  // transactions update the next day's notification body before it fires.
   useEffect(() => {
     if (!isHydrated || !blob.setupComplete) return;
     let cancelled = false;
@@ -450,7 +534,8 @@ export function BudgetProvider({ children }: { children: React.ReactNode }) {
       if (cancelled) return;
       setNotificationsGranted(granted);
       if (granted) {
-        await scheduleAllReminders(reminderTimes).catch((e) => {
+        const copy = buildReminderCopy(blob);
+        await scheduleAllReminders(reminderTimes, copy).catch((e) => {
           console.warn('[reminders] schedule on launch failed:', e);
         });
       }
@@ -458,7 +543,7 @@ export function BudgetProvider({ children }: { children: React.ReactNode }) {
     return () => {
       cancelled = true;
     };
-  }, [isHydrated, blob.setupComplete, reminderTimes]);
+  }, [isHydrated, blob.setupComplete, reminderTimes, blob.current, blob.recurring, blob.currency]);
 
   // ─── Month close ──────────────────────────────────────────────────────────
   const [monthCloseBannerDismissed, setBannerDismissed] = useState(false);
@@ -539,6 +624,12 @@ export function BudgetProvider({ children }: { children: React.ReactNode }) {
       addRecurring,
       updateRecurring,
       removeRecurring,
+      goals,
+      addGoal,
+      updateGoal,
+      removeGoal,
+      contributeToGoal,
+      archiveGoal,
       reminderTimes,
       setReminderTimes,
       notificationsGranted,
@@ -575,6 +666,12 @@ export function BudgetProvider({ children }: { children: React.ReactNode }) {
       addRecurring,
       updateRecurring,
       removeRecurring,
+      goals,
+      addGoal,
+      updateGoal,
+      removeGoal,
+      contributeToGoal,
+      archiveGoal,
       reminderTimes,
       setReminderTimes,
       notificationsGranted,
@@ -607,4 +704,47 @@ export function useBudget(): BudgetContextValue {
 /** Convenience accessor that returns just the current month. */
 export function useCurrentMonth(): MonthState {
   return useBudget().currentMonth;
+}
+
+/**
+ * Build the daily-reminder notification copy from the current blob. Thin
+ * adapter that assembles a `SmartReminderContext` snapshot and hands it to
+ * the pure `smartReminderContent` picker in core. Lives here (not in a
+ * selector) because it pulls from multiple unrelated slices of the blob.
+ */
+function buildReminderCopy(blob: BudgetBlob): SmartReminderCopy {
+  const now = new Date();
+  const month = blob.current;
+  const today = todaysSafeToSpend(month, now, blob.recurring);
+  const daysLeft = daysRemainingIn(month.monthKey, now);
+  const pace = paceStatus(month, now, blob.recurring);
+  const allocated = allocatedByCategory(month.plan);
+  const spent = spentByCategory(month);
+  const monthLabel = (() => {
+    const [y, m] = month.monthKey.split('-').map(Number);
+    if (!y || !m) return 'This month';
+    return new Date(y, m - 1, 1).toLocaleDateString(undefined, { month: 'long' });
+  })();
+  return smartReminderContent({
+    symbol: symbolFor(blob.currency),
+    today,
+    daysLeft,
+    needsReview: !!month.needsReview,
+    pace,
+    categories: month.plan.categories.map((c) => ({
+      name: c.name,
+      allocated: allocated[c.id] ?? 0,
+      spent: spent[c.id] ?? 0,
+    })),
+    recurring: blob.recurring
+      .filter((r) => r.active)
+      .map((r) => ({
+        name: r.name,
+        amount: r.amount,
+        dayOfMonth: r.dayOfMonth,
+        firedThisMonth: r.lastGeneratedMonth === month.monthKey,
+      })),
+    dayOfMonth: now.getUTCDate(),
+    monthLabel,
+  });
 }

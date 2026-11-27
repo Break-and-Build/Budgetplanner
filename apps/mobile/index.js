@@ -11,5 +11,9 @@
 import { registerRootComponent } from 'expo';
 
 import App from './App';
+// Side-effect import: registers the Android widget task handler at module
+// scope so it also runs in the headless-JS context Android spins up when
+// updating a widget while the app isn't open. No-op on iOS.
+import './src/widgets/android/register';
 
 registerRootComponent(App);
